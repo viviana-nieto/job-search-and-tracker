@@ -1,0 +1,184 @@
+# Job Search Agent
+
+An AI-powered job search assistant that manages outreach, cover letters, connection requests, and job tracking. It uses structured data, templates, and automation scripts to streamline the job hunt.
+
+---
+
+## Career Context
+
+- **Name**: {{name}}
+- **Current Role**: {{current_role}}
+- **Career Arc**: {{career_arc}}
+- **Core Skills**: {{skills}}
+- **Education**: {{education}}
+- **Target Industries**: {{target_industries}}
+- **Target Roles**: {{target_roles}}
+- **Preferred Locations**: {{locations}}
+
+---
+
+## Writing Style Rules
+
+{{writing_rules}}
+
+---
+
+## Data Locations
+
+| File | Path |
+|------|------|
+| Resume | {{resume_path}} |
+| LinkedIn connections | {{project_dir}}/data/connections.csv |
+| Outreach history | {{project_dir}}/data/outreach-history.json |
+| Company sizes | {{project_dir}}/data/company-sizes.json |
+| Saved jobs | {{project_dir}}/data/jobs/ |
+| All fetched jobs | {{project_dir}}/data/jobs/all-jobs.json |
+| User profile | {{project_dir}}/config/profile.json |
+| Search criteria | {{project_dir}}/config/search-criteria.json |
+| Talking points | {{project_dir}}/config/talking-points.json |
+| Writing style config | {{project_dir}}/config/writing-style.json |
+
+---
+
+## Output Locations
+
+| Type | Path |
+|------|------|
+| Cover letters | {{project_dir}}/outputs/cover-letters/ |
+| Connection requests | {{project_dir}}/outputs/connection-requests/ |
+| Emails | {{project_dir}}/outputs/emails/ |
+| Daily summaries | {{project_dir}}/outputs/daily-summaries/ |
+| PDF exports | ~/Downloads/ |
+
+---
+
+## Skill Location
+
+The job search agent slash command is installed at:
+
+```
+~/.claude/commands/job-search-agent.md
+```
+
+---
+
+## Key Value Propositions
+
+{{talking_points}}
+
+---
+
+## Scripts
+
+All scripts are in `{{project_dir}}/scripts/` and load configuration from `{{project_dir}}/config/`.
+
+### company_classifier.py
+
+Classify a company as "startup" or "large" for outreach tone adjustment.
+
+```bash
+cd {{project_dir}} && python3 scripts/company_classifier.py "Stripe"
+cd {{project_dir}} && python3 scripts/company_classifier.py "Acme Corp" --add startup
+cd {{project_dir}} && python3 scripts/company_classifier.py "Google" --json
+```
+
+### save_job.py
+
+Save a job posting as structured JSON for tracking and linking to outreach.
+
+```bash
+cd {{project_dir}} && python3 scripts/save_job.py save --company "Stripe" --role "Product Manager" --url "https://..." --location "San Francisco" --salary "180k-220k" --source linkedin --status applied
+cd {{project_dir}} && python3 scripts/save_job.py list
+cd {{project_dir}} && python3 scripts/save_job.py link-outreach --job-id "2026-04-07-stripe-product-manager" --outreach-id "john-doe-stripe"
+cd {{project_dir}} && python3 scripts/save_job.py link-cover-letter --job-id "2026-04-07-stripe-product-manager" --path "outputs/cover-letters/stripe-pm.md"
+```
+
+### update_outreach.py
+
+Log outreach, update outcomes, and view stats.
+
+```bash
+cd {{project_dir}} && python3 scripts/update_outreach.py log --name "John" --company "Stripe" --role recruiter --type connection-request --message "Hi John, ..." --job-id "2026-04-07-stripe-product-manager"
+cd {{project_dir}} && python3 scripts/update_outreach.py update --name "John" --company "Stripe" --status accepted
+cd {{project_dir}} && python3 scripts/update_outreach.py update --name "John" --company "Stripe" --status replied --date 2026-04-10
+cd {{project_dir}} && python3 scripts/update_outreach.py stats
+```
+
+### smart_template.py
+
+Generate LinkedIn outreach messages (connection requests, InMails, LinkedIn messages) based on company size and recipient role. Includes A/B test variants.
+
+```bash
+cd {{project_dir}} && python3 scripts/smart_template.py --name "Sarah" --company "Plaid" --job-title "Product Manager" --role recruiter --type connection-request
+cd {{project_dir}} && python3 scripts/smart_template.py --name "Mike" --company "Google" --job-title "Senior PM" --role hiring-manager --type inmail
+cd {{project_dir}} && python3 scripts/smart_template.py --name "Lisa" --company "Notion" --job-title "PM" --role peer --type linkedin-message
+```
+
+### generate_pdf.py
+
+Generate professional PDFs from markdown cover letters or resumes.
+
+```bash
+cd {{project_dir}} && python3 scripts/generate_pdf.py --type cover-letter --input outputs/cover-letters/stripe-pm.md --company Stripe
+cd {{project_dir}} && python3 scripts/generate_pdf.py --type resume --input path/to/resume.md
+cd {{project_dir}} && python3 scripts/generate_pdf.py --type cover-letter --input outputs/cover-letters/stripe-pm.md --output ~/Downloads/custom-name.pdf
+```
+
+### score_messages.py
+
+Analyze outreach history to find best-performing message patterns, broken down by message type, company size, and recipient role.
+
+```bash
+cd {{project_dir}} && python3 scripts/score_messages.py
+```
+
+### fetch_jobs.py
+
+Fetch jobs from multiple sources (JSearch via RapidAPI or LinkedIn via Apify). Deduplicates results and maintains a master job repository.
+
+```bash
+cd {{project_dir}} && python3 scripts/fetch_jobs.py
+cd {{project_dir}} && python3 scripts/fetch_jobs.py --source apify
+cd {{project_dir}} && python3 scripts/fetch_jobs.py --keywords "Product Manager" "AI PM"
+cd {{project_dir}} && python3 scripts/fetch_jobs.py --locations "New York" "Remote"
+cd {{project_dir}} && python3 scripts/fetch_jobs.py --source jsearch --keywords "Data Analyst" --max-jobs 50
+```
+
+**Environment variables required:**
+- `RAPIDAPI_KEY` for JSearch (free: 500 req/month)
+- `APIFY_TOKEN` for Apify/LinkedIn (free: 30 req/month)
+
+---
+
+## Connection Matching Logic
+
+When matching LinkedIn connections to a job opportunity, score each connection using these weights:
+
+| Signal | Points |
+|--------|--------|
+| Works at target company | +50 |
+| Same department/team as role | +30 |
+| Hiring manager for the role | +40 |
+| Recruiter at company | +25 |
+| Has relevant title (VP, Director, Head of) | +20 |
+| Shared school or past company | +15 |
+| 1st-degree connection | +10 |
+| 2nd-degree connection | +5 |
+| Recently active on LinkedIn | +5 |
+
+**Matching process:**
+1. Load connections from `data/connections.csv`
+2. Filter connections at the target company (exact and fuzzy match on company name)
+3. Score each match using the weights above
+4. Rank by total score, descending
+5. For each top match, suggest the best outreach type:
+   - Score >= 70: Direct message or email
+   - Score 40-69: Connection request with personalized note
+   - Score < 40: Connection request with general note
+6. Check outreach history to avoid duplicate outreach
+7. Present top 5 matches with scores and recommended actions
+
+**Fuzzy matching rules:**
+- Ignore case, "Inc", "LLC", "Corp", "Ltd", "Co." suffixes
+- Match parent companies (e.g., "Meta" matches "Facebook")
+- Match subsidiary names if listed in company-sizes.json

@@ -1,0 +1,37 @@
+{
+  "ai_ml": [
+    "Built ML-powered recommendation engine that increased engagement 35%",
+    "Led cross-functional team of 12 engineers and 3 data scientists on AI product launch",
+    "Defined evaluation framework for LLM-based features with measurable quality metrics",
+    "Experience shipping AI products with responsible AI guardrails and safety reviews"
+  ],
+  "fintech": [
+    "Built payment platform processing $200M annually with 99.99% uptime",
+    "Led compliance integration across 5 regulatory frameworks (PCI-DSS, SOX, etc.)",
+    "Reduced fraud rate 60% through ML-based risk scoring system",
+    "Experience with payment rails, banking APIs, and financial data infrastructure"
+  ],
+  "enterprise_saas": [
+    "Drove enterprise deal expansion from $2M to $8M ARR through platform features",
+    "Built self-serve onboarding reducing time-to-value from 14 days to 2 days",
+    "Led API platform strategy serving 500+ enterprise integrations",
+    "Experience with PLG motions, usage-based pricing, and enterprise sales cycles"
+  ],
+  "growth": [
+    "Increased user activation 40% through redesigned onboarding flow",
+    "Built experimentation platform running 50+ concurrent A/B tests",
+    "Defined north star metrics and built dashboards used by exec team weekly",
+    "Experience with funnel optimization, retention analysis, and cohort modeling"
+  ],
+  "health_tech": [
+    "Navigated HIPAA compliance for consumer health product launch",
+    "Built patient engagement features increasing adherence rates 25%",
+    "Experience with EHR integrations and healthcare data standards (HL7, FHIR)"
+  ],
+  "general": [
+    "Track record of 0-to-1 product launches and scaling to millions of users",
+    "Strong technical background with hands-on SQL, Python, and data analysis skills",
+    "Metrics-first approach: every feature ships with success criteria and instrumentation",
+    "Experience working with distributed teams across engineering, design, data science, and business stakeholders"
+  ]
+}

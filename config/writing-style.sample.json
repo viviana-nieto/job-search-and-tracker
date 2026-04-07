@@ -1,0 +1,28 @@
+{
+  "sign_offs": {
+    "linkedin": "~Jane",
+    "email": "Best,\nJane",
+    "formal": "Warm regards,",
+    "default": "~Jane"
+  },
+  "pm_phrases": {
+    "startup": "product leader",
+    "large": "PM",
+    "unknown": "PM"
+  },
+  "writing_rules": [
+    "Never use 'synergy', 'leverage', 'circle back', or 'move the needle'",
+    "Keep sentences under 20 words when possible",
+    "Lead with specifics, not generalities",
+    "Use numbers and metrics over vague claims",
+    "Write in first person, active voice",
+    "Sound conversational, not corporate",
+    "Avoid exclamation marks except in CTAs",
+    "Do not start sentences with 'I am writing to...' or 'I hope this finds you well'",
+    "Match formality to context: casual for LinkedIn, professional for email, formal for cover letters",
+    "When referencing PM work, say 'PM' not 'startup PM' for large companies",
+    "Keep LinkedIn connection requests under 300 characters",
+    "Every email needs exactly 5 subject line variants",
+    "Cover letters must be one page maximum"
+  ]
+}

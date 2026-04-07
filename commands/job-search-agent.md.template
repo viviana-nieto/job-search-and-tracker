@@ -1,0 +1,406 @@
+# /job-search-agent
+
+AI-powered job search agent that manages outreach, cover letters, connection matching, job tracking, and analytics.
+
+---
+
+## Invocation
+
+This skill activates when the user runs `/job-search-agent` or makes job search-related requests such as:
+- Writing cover letters, connection requests, or emails
+- Matching connections to jobs
+- Fetching or saving jobs
+- Logging outreach and tracking outcomes
+- Generating daily summaries or stats
+- Running the full pipeline
+
+---
+
+## Data Sources
+
+| Data | Path |
+|------|------|
+| Resume | {{resume_path}} |
+| LinkedIn connections | {{project_dir}}/data/connections.csv |
+| Outreach history | {{project_dir}}/data/outreach-history.json |
+| Saved jobs | {{project_dir}}/data/jobs/ |
+| All fetched jobs | {{project_dir}}/data/jobs/all-jobs.json |
+| Company sizes | {{project_dir}}/data/company-sizes.json |
+| User profile | {{project_dir}}/config/profile.json |
+| Search criteria | {{project_dir}}/config/search-criteria.json |
+| Talking points | {{project_dir}}/config/talking-points.json |
+| Writing style config | {{project_dir}}/config/writing-style.json |
+| Templates | {{project_dir}}/templates/ |
+
+---
+
+## Core Workflow
+
+### 1. Load Data
+Read the relevant data files before generating any output:
+- Load `config/profile.json` for career context, credibility snippets, and contact info
+- Load `config/writing-style.json` for tone and formatting rules
+- Load `config/talking-points.json` for industry-specific value propositions
+- Load `config/search-criteria.json` for target roles, companies, and locations
+- Load `data/outreach-history.json` to check existing outreach and avoid duplicates
+- Load `data/connections.csv` when matching connections
+
+### 2. Match Connections
+When a job is provided, match LinkedIn connections using the scoring system (see Connection Matching Logic below).
+
+### 3. Generate Outputs
+Produce cover letters, connection requests, emails, or summaries using templates from `{{project_dir}}/templates/` and the writing style rules below.
+
+---
+
+## Writing Style Rules
+
+{{writing_rules}}
+
+---
+
+## Key Talking Points
+
+{{talking_points}}
+
+---
+
+## Output Commands
+
+### `fetch jobs`
+
+Fetch jobs from configured search sources. Defaults to JSearch (RapidAPI).
+
+**Variants:**
+- `fetch jobs` -- default search with configured keywords and locations
+- `fetch jobs --source apify` -- use LinkedIn via Apify instead of JSearch
+- `fetch jobs for [keywords]` -- search with specific keywords (e.g., `fetch jobs for Product Manager AI`)
+- `fetch jobs in [locations]` -- search in specific locations (e.g., `fetch jobs in New York, Remote`)
+
+```bash
+cd {{project_dir}} && python3 scripts/fetch_jobs.py
+cd {{project_dir}} && python3 scripts/fetch_jobs.py --source apify
+cd {{project_dir}} && python3 scripts/fetch_jobs.py --keywords "Product Manager" "AI PM"
+cd {{project_dir}} && python3 scripts/fetch_jobs.py --locations "New York" "Remote"
+```
+
+After fetching, summarize the results: total jobs found, new vs duplicate, and notable companies.
+
+---
+
+### `run pipeline`
+
+Execute the full daily job search pipeline:
+
+1. Fetch new jobs (`fetch_jobs.py`)
+2. Review and score new postings against search criteria
+3. Match connections for top opportunities
+4. Generate outreach for the best matches
+5. Produce a daily summary
+
+Save the daily summary to `{{project_dir}}/outputs/daily-summaries/YYYY-MM-DD.md`.
+
+---
+
+### `write cover letter for [company] [role]`
+
+Generate a tailored cover letter for a specific company and role.
+
+**Steps:**
+1. Load the job description from `data/jobs/` if saved, or ask user to provide it
+2. Read `templates/cover-letter.md` for structure
+3. Load profile, talking points, and writing style
+4. Write the cover letter, tailoring credibility and value props to the role
+5. Save to `{{project_dir}}/outputs/cover-letters/[company]-[role-slug].md`
+
+**Template variables:** Use `{{name}}`, `{{cred_long}}`, `{{sign_off_formal}}`, `{{title}}`, `{{phone}}`, `{{email}}`, `{{website}}` from config.
+
+---
+
+### `write connection request for [name] at [company] for [job description]`
+
+Generate a LinkedIn connection request (max 300 chars) personalized to a specific job.
+
+**Steps:**
+1. Classify the company size using `company_classifier.py`
+2. Determine recipient role (recruiter, hiring-manager, executive, peer, ceo)
+3. Generate the message using `smart_template.py` patterns
+4. Verify character count is under 300
+5. Save to `{{project_dir}}/outputs/connection-requests/[name]-[company].md`
+6. Log to outreach history
+
+```bash
+cd {{project_dir}} && python3 scripts/smart_template.py --name "[name]" --company "[company]" --job-title "[role]" --role [recipient_role] --type connection-request
+```
+
+---
+
+### `write connection request for [name] at [company]`
+
+Generate a general connection request without a specific job posting. Use a broader approach focused on the company and mutual interest.
+
+**Steps:**
+1. Classify company size
+2. Infer recipient role from context or ask
+3. Generate a connection request emphasizing shared interests, their work, or company mission
+4. Keep under 300 characters
+5. Save and log
+
+---
+
+### `write email to [name] about [role]`
+
+Generate a professional outreach email with 5 subject line variants.
+
+**Steps:**
+1. Read `templates/email-outreach.md` for structure
+2. Load profile and talking points
+3. Select the appropriate template (recruiter, hiring manager, or cold outreach)
+4. Generate 5 subject lines across categories (direct, curiosity, mutual, value-first, question)
+5. Write the email body (under 200 words for cold outreach)
+6. Save to `{{project_dir}}/outputs/emails/[name]-[company].md`
+
+---
+
+### `draft email to [name] at [email]`
+
+Create a Gmail draft using the Gmail MCP integration.
+
+**Steps:**
+1. Generate the email content following the email template
+2. Create a Gmail draft via MCP:
+   - To: the provided email address
+   - From: {{email_account}}
+   - Subject: best subject line from the 5 variants
+   - Body: the generated email
+3. Confirm draft creation and provide the Gmail link
+
+---
+
+### `generate pdf for [cover letter or resume]`
+
+Convert a markdown cover letter or resume to a professional PDF.
+
+```bash
+cd {{project_dir}} && python3 scripts/generate_pdf.py --type cover-letter --input [input_file] --company [company]
+cd {{project_dir}} && python3 scripts/generate_pdf.py --type resume --input [input_file]
+```
+
+Output goes to `~/Downloads/` with the naming convention: `{{filename_prefix}}_CoverLetter_[Company]_YYYY-MM-DD.pdf` or `{{filename_prefix}}_Resume_YYYY-MM-DD.pdf`.
+
+---
+
+### `generate daily summary`
+
+Create a summary of the day's job search activity.
+
+**Include:**
+- New jobs fetched and saved
+- Outreach sent today (with outcomes if any)
+- Pending follow-ups (outreach sent 3+ days ago with no response)
+- Top opportunities to act on
+- Stats snapshot (total outreach, response rate, interviews)
+
+Save to `{{project_dir}}/outputs/daily-summaries/YYYY-MM-DD.md`.
+
+---
+
+### `match connections for [job]`
+
+Find the best LinkedIn connections to reach out to for a specific job.
+
+**Steps:**
+1. Load `data/connections.csv`
+2. Identify the target company from the job
+3. Score connections using the matching logic (see below)
+4. Check outreach history for duplicates
+5. Present top 5 matches with scores and recommended outreach type
+
+---
+
+### `save job [job description]`
+
+Save a job posting for tracking.
+
+```bash
+cd {{project_dir}} && python3 scripts/save_job.py save --company "[company]" --role "[role]" --url "[url]" --location "[location]" --salary "[salary]" --source [source] --status applied
+```
+
+---
+
+### `log outreach to [name] at [company]`
+
+Record outreach in the tracking system.
+
+```bash
+cd {{project_dir}} && python3 scripts/update_outreach.py log --name "[name]" --company "[company]" --role [recipient_role] --type [msg_type] --message "[message text]" --job-id "[job_id]"
+```
+
+---
+
+### `update outcome for [name] at [company]`
+
+Update the outcome of a previous outreach.
+
+```bash
+cd {{project_dir}} && python3 scripts/update_outreach.py update --name "[name]" --company "[company]" --status [sent|accepted|replied|interview|no_response|declined]
+```
+
+---
+
+### `show stats`
+
+Display outreach performance statistics.
+
+```bash
+cd {{project_dir}} && python3 scripts/update_outreach.py stats
+```
+
+---
+
+### `score messages`
+
+Analyze outreach history to find best-performing message patterns.
+
+```bash
+cd {{project_dir}} && python3 scripts/score_messages.py
+```
+
+---
+
+## Gmail Integration
+
+When drafting emails via Gmail, use the Gmail MCP tools:
+
+1. **Search for existing threads**: Check if there is prior correspondence with the recipient
+2. **Create draft**: Use `gmail_create_draft` with:
+   - `to`: recipient email
+   - `subject`: best subject line
+   - `body`: generated email content
+   - `from`: {{email_account}}
+3. **Confirm**: Report the draft was created and provide link
+
+Always ask before sending. Create drafts, not sent messages.
+
+---
+
+## Scripts Integration
+
+All scripts live in `{{project_dir}}/scripts/` and use `config_loader.py` to read user configuration from `{{project_dir}}/config/`.
+
+| Script | Purpose | Key Command |
+|--------|---------|-------------|
+| `fetch_jobs.py` | Multi-source job fetcher | `python3 scripts/fetch_jobs.py` |
+| `company_classifier.py` | Classify company size | `python3 scripts/company_classifier.py "Company"` |
+| `save_job.py` | Save and manage job postings | `python3 scripts/save_job.py save --company X --role Y` |
+| `update_outreach.py` | Log outreach and track outcomes | `python3 scripts/update_outreach.py log ...` |
+| `smart_template.py` | Generate LinkedIn messages | `python3 scripts/smart_template.py --name X ...` |
+| `generate_pdf.py` | Markdown to PDF conversion | `python3 scripts/generate_pdf.py --type cover-letter ...` |
+| `score_messages.py` | Message performance analysis | `python3 scripts/score_messages.py` |
+
+All commands should be run from `{{project_dir}}`:
+```bash
+cd {{project_dir}} && python3 scripts/[script_name].py [args]
+```
+
+---
+
+## Pipeline Output Folder Structure
+
+```
+{{project_dir}}/
+  outputs/
+    cover-letters/
+      [company]-[role-slug].md
+    connection-requests/
+      [name]-[company].md
+    emails/
+      [name]-[company].md
+    daily-summaries/
+      YYYY-MM-DD.md
+  data/
+    jobs/
+      all-jobs.json
+      YYYY-MM-DD-[source].json
+      YYYY-MM-DD-[company]-[role-slug].json
+    outreach-history.json
+    connections.csv
+    company-sizes.json
+  config/
+    profile.json
+    search-criteria.json
+    talking-points.json
+    writing-style.json
+  templates/
+    cover-letter.md
+    connection-request.md
+    email-outreach.md
+  scripts/
+    config_loader.py
+    fetch_jobs.py
+    company_classifier.py
+    save_job.py
+    update_outreach.py
+    smart_template.py
+    generate_pdf.py
+    score_messages.py
+```
+
+---
+
+## File Naming Convention
+
+All generated PDFs follow this pattern:
+
+- Cover letters: `{{filename_prefix}}_CoverLetter_[Company]_YYYY-MM-DD.pdf`
+- Resumes: `{{filename_prefix}}_Resume_YYYY-MM-DD.pdf`
+- Other documents: `{{filename_prefix}}_[DocType]_YYYY-MM-DD.pdf`
+
+PDFs are saved to `~/Downloads/` by default.
+
+---
+
+## Error Handling
+
+1. **Missing config**: If `config/profile.json` does not exist, tell the user to run `python3 setup.py` first.
+2. **Missing API keys**: If `RAPIDAPI_KEY` or `APIFY_TOKEN` is not set, explain how to get one and set the environment variable.
+3. **Missing connections file**: If `data/connections.csv` is not found, explain how to export LinkedIn connections (Settings > Data privacy > Get a copy of your data > Connections).
+4. **Missing outreach history**: If `data/outreach-history.json` is not found, create a blank one with the structure: `{"metadata": {"last_updated": ""}, "connections": [], "applications": [], "stats": {"total_connections_sent": 0, "responses_received": 0, "interviews_scheduled": 0}}`.
+5. **Character limit exceeded**: If a connection request exceeds 300 characters, automatically trim by removing pleasantries first, then shortening credibility, then simplifying the CTA.
+6. **Duplicate outreach**: Before logging, check if outreach to the same person at the same company already exists. Warn the user and ask before creating a duplicate.
+7. **Script failures**: If a script exits with a non-zero code, show the error output and suggest a fix.
+
+---
+
+## Connection Matching Logic
+
+When matching LinkedIn connections to a job opportunity, score each connection using these weights:
+
+| Signal | Points |
+|--------|--------|
+| Works at target company | +50 |
+| Same department/team as role | +30 |
+| Hiring manager for the role | +40 |
+| Recruiter at company | +25 |
+| Has relevant title (VP, Director, Head of) | +20 |
+| Shared school or past company | +15 |
+| 1st-degree connection | +10 |
+| 2nd-degree connection | +5 |
+| Recently active on LinkedIn | +5 |
+
+**Matching process:**
+1. Load connections from `data/connections.csv`
+2. Filter connections at the target company (exact and fuzzy match on company name)
+3. Score each match using the weights above
+4. Rank by total score, descending
+5. For each top match, suggest the best outreach type:
+   - Score >= 70: Direct message or email
+   - Score 40-69: Connection request with personalized note
+   - Score < 40: Connection request with general note
+6. Check `data/outreach-history.json` to avoid duplicate outreach
+7. Present top 5 matches with scores and recommended actions
+
+**Fuzzy matching rules:**
+- Ignore case, "Inc", "LLC", "Corp", "Ltd", "Co." suffixes
+- Match parent companies (e.g., "Meta" matches "Facebook")
+- Match subsidiary names if listed in `data/company-sizes.json`

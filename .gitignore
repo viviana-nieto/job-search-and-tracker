@@ -1,0 +1,27 @@
+# Config files (keep samples)
+config/*.json
+!config/*.sample.json
+
+# Data files
+data/connections.csv
+data/outreach-history.json
+data/company-sizes.json
+data/applied-jobs.json
+data/selected-jobs.json
+data/sent-requests.json
+data/jobs/*.json
+!data/jobs/sample-job.json
+
+# Outputs
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+
+# Environment
+.env
+venv/
+
+# Auto-generated
+CLAUDE.md

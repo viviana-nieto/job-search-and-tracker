@@ -1,0 +1,73 @@
+{
+  "roles": [
+    "Product Manager",
+    "Senior Product Manager",
+    "Staff Product Manager",
+    "Director of Product"
+  ],
+  "industries": {
+    "primary": [
+      {
+        "name": "AI/ML",
+        "companies": ["OpenAI", "Anthropic", "Google DeepMind", "Cohere", "Mistral"]
+      },
+      {
+        "name": "Fintech",
+        "companies": ["Stripe", "Plaid", "Square", "Brex", "Ramp"]
+      }
+    ],
+    "secondary": [
+      {
+        "name": "Big Tech AI",
+        "companies": ["Google", "Meta", "Apple", "Amazon", "Microsoft"]
+      },
+      {
+        "name": "Enterprise SaaS",
+        "companies": ["Salesforce", "Datadog", "Snowflake", "Figma", "Notion"]
+      },
+      {
+        "name": "Health Tech",
+        "companies": ["Oscar Health", "Ro", "Noom", "Hims & Hers"]
+      }
+    ]
+  },
+  "locations": {
+    "preferred": [
+      "San Francisco Bay Area",
+      "New York City"
+    ],
+    "acceptable": [
+      "Remote",
+      "Seattle",
+      "Los Angeles"
+    ]
+  },
+  "search_queries": {
+    "high_priority": [
+      "Product Manager AI",
+      "Senior Product Manager ML",
+      "Product Manager Fintech"
+    ],
+    "medium_priority": [
+      "Product Manager SaaS",
+      "Product Manager Payments",
+      "Product Manager Growth"
+    ],
+    "low_priority": [
+      "Technical Product Manager",
+      "Product Manager Data"
+    ]
+  },
+  "scoring_weights": {
+    "role_match": 0.30,
+    "company_match": 0.25,
+    "industry_match": 0.20,
+    "location_match": 0.15,
+    "seniority_match": 0.10
+  },
+  "exclusions": {
+    "companies": ["CompanyToAvoid"],
+    "keywords": ["intern", "junior", "entry level", "contract", "part-time"],
+    "min_salary": 150000
+  }
+}

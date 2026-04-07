@@ -1,0 +1,25 @@
+{
+  "job_id": "sample-001",
+  "title": "Product Manager",
+  "company": "Acme Corp",
+  "location": "San Francisco, CA",
+  "remote": true,
+  "url": "https://example.com/jobs/sample-001",
+  "source": "linkedin",
+  "date_posted": "2026-04-01",
+  "date_saved": "2026-04-07",
+  "description": "We are looking for a Product Manager to lead cross-functional teams...",
+  "requirements": [
+    "3+ years of product management experience",
+    "Experience with agile methodologies",
+    "Strong analytical and communication skills"
+  ],
+  "salary_range": {
+    "min": 120000,
+    "max": 180000,
+    "currency": "USD"
+  },
+  "company_size": "large",
+  "status": "new",
+  "notes": ""
+}

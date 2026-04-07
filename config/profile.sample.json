@@ -1,0 +1,48 @@
+{
+  "name": "Jane Doe",
+  "title": "Senior Product Manager",
+  "filename_prefix": "Doe_Jane",
+  "contact": {
+    "email": "jane@example.com",
+    "phone": "+1 555 1234567",
+    "location": "San Francisco Bay Area",
+    "website": "https://janedoe.com"
+  },
+  "career_arc": [
+    {
+      "company": "TechCorp",
+      "role": "Senior PM",
+      "years": "2022-2025",
+      "achievement": "Led AI product launch reaching 1M users"
+    },
+    {
+      "company": "StartupCo",
+      "role": "Product Manager",
+      "years": "2019-2022",
+      "achievement": "Built payment platform processing $200M annually"
+    },
+    {
+      "company": "BigBank",
+      "role": "Associate PM",
+      "years": "2017-2019",
+      "achievement": "Redesigned onboarding flow, increasing conversion 40%"
+    }
+  ],
+  "skills": [
+    "SQL",
+    "Python",
+    "Product Strategy",
+    "A/B Testing",
+    "Data Analysis",
+    "User Research",
+    "Roadmap Planning",
+    "Cross-functional Leadership"
+  ],
+  "education": "Stanford University, MBA | UC Berkeley, BS Computer Science",
+  "credibility": {
+    "short": "8 years building AI and fintech products at scale",
+    "medium": "PM with 8 years of experience building AI and fintech products, from 0-to-1 launches to scaling platforms to millions of users",
+    "long": "Over the past 8 years, I have built and scaled products across AI, fintech, and enterprise SaaS. At TechCorp, I led the AI product launch that reached 1M users in 6 months. At StartupCo, I built the payment platform from scratch to $200M in annual volume. I bring a metrics-first approach to product strategy, grounded in strong technical fundamentals and a bias for shipping."
+  },
+  "quantified_impact": "$500M+ in documented business impact across AI and fintech products"
+}
