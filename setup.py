@@ -117,6 +117,8 @@ def collect_personal_info():
     website = ask("Website or LinkedIn URL", required=False)
     location = ask("Location (e.g. 'San Francisco Bay Area')", default="San Francisco Bay Area")
 
+    resume_path = ask("Path to your resume (PDF or markdown)", required=False)
+
     # Languages
     print("\n  Which languages do you want to generate outreach in?")
     languages = ask_list("Languages", default="en, es")
@@ -131,6 +133,7 @@ def collect_personal_info():
             "website": website,
             "location": location,
         },
+        "resume_path": resume_path,
         "languages": languages,
         "default_language": default_language,
     }
@@ -621,97 +624,86 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
 # Generate Skill File
 # ---------------------------------------------------------------------------
 
-def generate_skill_file(profile):
-    """Generate the ~/.claude/commands/job-search-agent.md skill file."""
+def generate_skill_file(profile, writing_style=None, talking_points=None):
+    """Generate the ~/.claude/commands/job-search-agent.md skill file.
+
+    If commands/job-search-agent.md.template exists, render it with placeholders.
+    Otherwise, generate a basic version.
+    """
+    SKILL_TEMPLATE = COMMANDS_DIR / "job-search-agent.md.template"
+
+    if SKILL_TEMPLATE.exists():
+        with open(SKILL_TEMPLATE) as f:
+            template = f.read()
+
+        # Build writing rules string
+        writing_rules_str = ""
+        if writing_style:
+            rules = writing_style.get("writing_rules", [])
+            writing_rules_str = "\n".join(f"- {rule}" for rule in rules)
+
+        # Build talking points string
+        talking_points_str = ""
+        if talking_points:
+            for industry, points in talking_points.items():
+                talking_points_str += f"\n### {industry}\n"
+                for point in points:
+                    talking_points_str += f"- {point}\n"
+
+        # Get sign-offs (handle nested structure)
+        sign_offs = writing_style.get("sign_offs", {}) if writing_style else {}
+        default_lang = profile.get("default_language", "en")
+        if any(isinstance(v, dict) for v in sign_offs.values()):
+            lang_offs = sign_offs.get(default_lang, sign_offs.get("en", {}))
+        else:
+            lang_offs = sign_offs
+
+        replacements = {
+            "{{project_dir}}": str(PROJECT_DIR),
+            "{{resume_path}}": profile.get("resume_path", ""),
+            "{{name}}": profile.get("name", ""),
+            "{{first_name}}": profile.get("name", "").split()[0] if profile.get("name") else "",
+            "{{title}}": profile.get("title", ""),
+            "{{email}}": profile.get("contact", {}).get("email", ""),
+            "{{phone}}": profile.get("contact", {}).get("phone", ""),
+            "{{website}}": profile.get("contact", {}).get("website", ""),
+            "{{location}}": profile.get("contact", {}).get("location", ""),
+            "{{email_account}}": profile.get("contact", {}).get("email", ""),
+            "{{filename_prefix}}": profile.get("filename_prefix", ""),
+            "{{cred_short}}": profile.get("credibility", {}).get("short", ""),
+            "{{cred_medium}}": profile.get("credibility", {}).get("medium", ""),
+            "{{cred_long}}": profile.get("credibility", {}).get("long", ""),
+            "{{sign_off_linkedin}}": lang_offs.get("linkedin", ""),
+            "{{sign_off_email}}": lang_offs.get("email", ""),
+            "{{sign_off_formal}}": lang_offs.get("formal", ""),
+            "{{writing_rules}}": writing_rules_str,
+            "{{talking_points}}": talking_points_str,
+        }
+
+        for key, value in replacements.items():
+            template = template.replace(key, str(value))
+
+        return template
+
+    # Fallback: generate a basic skill file
     first_name = profile["name"].split()[0]
-    scripts = PROJECT_DIR / "scripts"
+    return f"""# /job-search-agent
 
-    lines = []
-    lines.append("# /job-search-agent")
-    lines.append("")
-    lines.append(f"{first_name}'s job search automation agent. Manages outreach, cover letters,")
-    lines.append("job tracking, and messaging from the command line using Claude Code.")
-    lines.append("")
-    lines.append("## Usage")
-    lines.append("")
-    lines.append("```")
-    lines.append("/job-search-agent")
-    lines.append("```")
-    lines.append("")
-    lines.append("Then describe what you need: draft a cover letter, generate outreach,")
-    lines.append("save a job, check stats, etc.")
-    lines.append("")
-    lines.append("## Project Location")
-    lines.append("")
-    lines.append(f"- **Project root**: `{PROJECT_DIR}`")
-    lines.append(f"- **Config**: `{CONFIG_DIR}`")
-    lines.append(f"- **Scripts**: `{scripts}`")
-    lines.append(f"- **Templates**: `{PROJECT_DIR / 'templates'}`")
-    lines.append(f"- **Data**: `{PROJECT_DIR / 'data'}`")
-    lines.append(f"- **Outputs**: `{PROJECT_DIR / 'outputs'}`")
-    lines.append("")
-    lines.append("## Available Scripts")
-    lines.append("")
-    lines.append(f"### Fetch Jobs")
-    lines.append(f"```bash")
-    lines.append(f"python {scripts / 'fetch_jobs.py'} --keywords 'Product Manager' --locations 'San Francisco'")
-    lines.append(f"```")
-    lines.append("")
-    lines.append(f"### Save a Job")
-    lines.append(f"```bash")
-    lines.append(f"python {scripts / 'save_job.py'} save --company Acme --role 'Product Manager' --url 'https://...'")
-    lines.append(f"```")
-    lines.append("")
-    lines.append(f"### Generate Outreach Message")
-    lines.append(f"```bash")
-    lines.append(f"python {scripts / 'smart_template.py'} --name Alex --company Acme --job-title 'PM' --role recruiter --type connection-request")
-    lines.append(f"```")
-    lines.append("")
-    lines.append(f"### Log Outreach")
-    lines.append(f"```bash")
-    lines.append(f"python {scripts / 'update_outreach.py'} log --name Alex --company Acme --role recruiter --type connection-request --message 'Hi...'")
-    lines.append(f"```")
-    lines.append("")
-    lines.append(f"### View Stats")
-    lines.append(f"```bash")
-    lines.append(f"python {scripts / 'update_outreach.py'} stats")
-    lines.append(f"```")
-    lines.append("")
-    lines.append(f"### Analyze Message Performance")
-    lines.append(f"```bash")
-    lines.append(f"python {scripts / 'score_messages.py'}")
-    lines.append(f"```")
-    lines.append("")
-    lines.append(f"### Generate PDF")
-    lines.append(f"```bash")
-    lines.append(f"python {scripts / 'generate_pdf.py'} --type cover-letter --input path/to/letter.md --company Acme")
-    lines.append(f"```")
-    lines.append("")
-    lines.append(f"### Classify Company")
-    lines.append(f"```bash")
-    lines.append(f"python {scripts / 'company_classifier.py'} 'Google'")
-    lines.append(f"```")
-    lines.append("")
-    lines.append("## Config Files")
-    lines.append("")
-    lines.append(f"- `{CONFIG_DIR / 'profile.json'}` - Personal info, career, credibility")
-    lines.append(f"- `{CONFIG_DIR / 'search-criteria.json'}` - Roles, companies, industries, locations")
-    lines.append(f"- `{CONFIG_DIR / 'talking-points.json'}` - Industry-specific talking points")
-    lines.append(f"- `{CONFIG_DIR / 'writing-style.json'}` - Sign-offs, PM phrases, writing rules")
-    lines.append("")
-    lines.append("## Instructions")
-    lines.append("")
-    lines.append(f"1. Read the project CLAUDE.md at `{CLAUDE_MD_PATH}` for full context.")
-    lines.append(f"2. Load config using `scripts/config_loader.py` functions.")
-    lines.append(f"3. Use the templates in `{PROJECT_DIR / 'templates'}` for message structure.")
-    lines.append(f"4. Save all generated outputs to `{PROJECT_DIR / 'outputs'}`.")
-    lines.append(f"5. Follow writing rules from `{CONFIG_DIR / 'writing-style.json'}`.")
-    lines.append(f"6. If humanizer is enabled in writing-style.json, apply humanizer rules")
-    lines.append(f"   from `{CONFIG_DIR / 'humanizer-rules.json'}` to all generated content")
-    lines.append(f"   to remove AI-sounding patterns before finalizing output.")
-    lines.append("")
+{first_name}'s job search automation agent.
 
-    return "\n".join(lines)
+## Project Location
+
+- **Project root**: `{PROJECT_DIR}`
+- **Config**: `{CONFIG_DIR}`
+
+## Instructions
+
+1. Read the project CLAUDE.md at `{CLAUDE_MD_PATH}` for full context.
+2. Load config using `scripts/config_loader.py` functions.
+3. Use the templates in `{PROJECT_DIR / 'templates'}` for message structure.
+4. Save all generated outputs to `{PROJECT_DIR / 'outputs'}`.
+5. Follow writing rules from `{CONFIG_DIR / 'writing-style.json'}`.
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -778,6 +770,7 @@ def run_interactive_setup():
         },
         "credibility": credibility,
         "quantified_impact": quantified_impact,
+        "resume_path": personal.get("resume_path", ""),
         "languages": personal.get("languages", ["en"]),
         "default_language": personal.get("default_language", "en"),
     }
@@ -798,7 +791,7 @@ def run_interactive_setup():
 
     # ---- Generate skill file ----
     SKILL_DIR.mkdir(parents=True, exist_ok=True)
-    skill_content = generate_skill_file(profile)
+    skill_content = generate_skill_file(profile, writing_style, talking_points)
     with open(SKILL_FILE, "w") as f:
         f.write(skill_content)
     print(f"  Created: {SKILL_FILE}")
@@ -883,7 +876,7 @@ def run_from_config():
 
     # Generate skill file
     SKILL_DIR.mkdir(parents=True, exist_ok=True)
-    skill_content = generate_skill_file(profile)
+    skill_content = generate_skill_file(profile, writing_style, talking_points)
     with open(SKILL_FILE, "w") as f:
         f.write(skill_content)
     print(f"  Updated: {SKILL_FILE}")
