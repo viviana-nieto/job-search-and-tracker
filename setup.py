@@ -578,7 +578,7 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
     lines.append("  writing-style.json    Sign-offs, PM phrases, writing rules")
     lines.append("scripts/             Automation scripts")
     lines.append("  config_loader.py   Shared config loader (all scripts import this)")
-    lines.append("  fetch_jobs.py      Multi-source job fetcher (JSearch, Apify)")
+    lines.append("  fetch_jobs.py      Job fetcher (JSearch via RapidAPI)")
     lines.append("  save_job.py        Save and track job postings")
     lines.append("  smart_template.py  Generate LinkedIn outreach messages")
     lines.append("  company_classifier.py  Classify companies as startup/large")

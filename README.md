@@ -4,7 +4,7 @@ Automates job search networking by analyzing your resume, matching LinkedIn conn
 
 ## Features
 
-- **Multi-source job fetching** - JSearch (RapidAPI) searches across LinkedIn, Indeed, Glassdoor, and ZipRecruiter; Apify scrapes LinkedIn directly
+- **Multi-source job fetching** - JSearch (RapidAPI) searches across LinkedIn, Indeed, Glassdoor, and ZipRecruiter
 - **Interactive HTML job browser** with salary ranges and apply links
 - **A/B tested LinkedIn connection requests** - 4 message variants (A/B/C/D) with character count enforcement (300 char limit)
 - **Tailored cover letters and resumes** per job, exported as professional PDFs
@@ -17,7 +17,7 @@ Automates job search networking by analyzing your resume, matching LinkedIn conn
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
 - Python 3.9+
-- Free API keys: [RapidAPI (JSearch)](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch) and/or [Apify](https://console.apify.com/account/integrations)
+- Free API key: [RapidAPI (JSearch)](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch)
 
 ## Quick Start
 
@@ -47,7 +47,6 @@ Automates job search networking by analyzing your resume, matching LinkedIn conn
 4. Set your API keys:
    ```bash
    export RAPIDAPI_KEY=your_jsearch_key
-   export APIFY_TOKEN=your_apify_token    # optional, alternative source
    ```
 
 5. In Claude Code, run:
@@ -59,8 +58,7 @@ Automates job search networking by analyzing your resume, matching LinkedIn conn
 
 | Command | Description |
 |---------|-------------|
-| `fetch jobs` | Fetch new job listings from JSearch or Apify |
-| `fetch jobs --source apify` | Fetch from LinkedIn via Apify instead of JSearch |
+| `fetch jobs` | Fetch new job listings from JSearch (RapidAPI) |
 | `run pipeline` | Full pipeline: fetch jobs, score, match connections, generate outreach |
 | `browse jobs` | Generate an interactive HTML job browser |
 | `write cover letter --company [Company] --role [Role]` | Generate a tailored cover letter |
@@ -103,7 +101,7 @@ job-search-agent-open/
 │       └── all-jobs.json             # Master job repository (generated)
 ├── scripts/
 │   ├── config_loader.py              # Configuration loader (all scripts import this)
-│   ├── fetch_jobs.py                 # Multi-source job fetcher (JSearch + Apify)
+│   ├── fetch_jobs.py                 # Job fetcher (JSearch via RapidAPI)
 │   ├── save_job.py                   # Save and manage individual job postings
 │   ├── company_classifier.py         # Classify companies as startup/large
 │   ├── smart_template.py             # Generate LinkedIn outreach messages
@@ -200,28 +198,6 @@ JSearch aggregates listings from LinkedIn, Indeed, Glassdoor, and ZipRecruiter i
 - Each keyword + location combination = 1 API request
 - Default search (8 keywords x 2 locations) = ~16 requests per fetch
 - Free tier resets monthly. At 1 fetch/day you'll use ~480 of 500 requests.
-
-### Apify (LinkedIn Direct) - Alternative
-
-Apify scrapes LinkedIn directly for job listings. Free tier gives you 30 requests/month. Best as a supplement to JSearch for LinkedIn-only results.
-
-**Step-by-step setup:**
-
-1. Go to [https://apify.com/](https://apify.com/) and create a free account
-2. Go to [Account Integrations](https://console.apify.com/account/integrations) to find your API token
-3. Copy the token and set the environment variable:
-   ```bash
-   export APIFY_TOKEN=your_token_here
-   ```
-4. Use it with the `--source apify` flag:
-   ```bash
-   python3 scripts/fetch_jobs.py --source apify
-   ```
-
-**Usage notes:**
-- Each keyword search = 1 API request (locations are bundled)
-- Free tier is limited (30/month), so use JSearch as your primary source
-- Apify results are LinkedIn-only but often include more detailed job descriptions
 
 ## License
 

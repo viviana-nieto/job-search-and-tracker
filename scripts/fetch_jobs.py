@@ -1,17 +1,14 @@
 """
-Job Fetcher - Multi-source job search
+Job Fetcher - JSearch via RapidAPI
 
-Supports two sources:
-  - jsearch: JSearch via RapidAPI (default, 500 requests/month free)
-  - apify: LinkedIn scraper via Apify (30 requests/month free)
+Searches across LinkedIn, Indeed, Glassdoor, and ZipRecruiter.
+Free tier: 500 requests/month.
 
 Setup:
-  JSearch: Create free RapidAPI account, subscribe to JSearch, set RAPIDAPI_KEY
-  Apify:   Create free Apify account, set APIFY_TOKEN
+  Create free RapidAPI account, subscribe to JSearch, set RAPIDAPI_KEY
 
 Usage:
-    python fetch_jobs.py                          # JSearch (default)
-    python fetch_jobs.py --source apify           # Apify
+    python fetch_jobs.py                          # Default search
     python fetch_jobs.py --keywords "PM AI"       # Custom keywords
     python fetch_jobs.py --locations "New York"   # Custom locations
 """
@@ -47,7 +44,6 @@ except ImportError:
 
 # Configuration
 RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY", "")
-APIFY_TOKEN = os.environ.get("APIFY_TOKEN", "")
 
 DEFAULT_LOCATION = DEFAULT_LOCATIONS[0] if DEFAULT_LOCATIONS else "San Francisco Bay Area"
 
@@ -196,134 +192,6 @@ def normalize_jsearch(jobs: list) -> list:
     return normalized
 
 
-# --- Apify (LinkedIn) ---
-
-def fetch_apify(keywords: list[str], locations: list[str] = None, max_jobs: int = 100):
-    """
-    Fetch jobs from LinkedIn via Apify.
-    Free tier: 30 requests/month.
-    """
-    if not APIFY_TOKEN:
-        print("Error: Please set your APIFY_TOKEN environment variable")
-        print("Get your token at: https://console.apify.com/account/integrations")
-        return []
-
-    if locations is None:
-        locations = [DEFAULT_LOCATION, "Remote"]
-
-    actor_id = "curious_coder~linkedin-jobs-scraper"
-    base_url = "https://api.apify.com/v2"
-    all_jobs = []
-
-    for keyword in keywords:
-        print(f"Searching for: {keyword}")
-
-        urls = []
-        for location in locations:
-            encoded_keyword = keyword.replace(" ", "%20")
-            encoded_location = location.replace(" ", "%20")
-            urls.append(
-                f"https://www.linkedin.com/jobs/search/"
-                f"?keywords={encoded_keyword}"
-                f"&location={encoded_location}"
-                f"&f_TPR=r604800"
-            )
-
-        run_input = {"urls": urls, "maxItems": max_jobs}
-
-        response = requests.post(
-            f"{base_url}/acts/{actor_id}/runs",
-            params={"token": APIFY_TOKEN},
-            json=run_input,
-            timeout=30,
-        )
-
-        if response.status_code != 201:
-            print(f"Error starting run: {response.status_code} - {response.text}")
-            continue
-
-        run_id = response.json()["data"]["id"]
-        print(f"  Run started: {run_id}")
-
-        max_wait = 120
-        waited = 0
-        status = "RUNNING"
-
-        while waited < max_wait:
-            status_response = requests.get(
-                f"{base_url}/actor-runs/{run_id}",
-                params={"token": APIFY_TOKEN},
-                timeout=30,
-            )
-            if status_response.status_code != 200:
-                break
-
-            status = status_response.json()["data"]["status"]
-            if status == "SUCCEEDED":
-                print(f"  Run completed!")
-                break
-            elif status in ["FAILED", "ABORTED", "TIMED-OUT"]:
-                print(f"  Run failed: {status}")
-                break
-            else:
-                print(f"  Status: {status}, waiting...")
-                time.sleep(5)
-                waited += 5
-
-        if status != "SUCCEEDED":
-            continue
-
-        results_response = requests.get(
-            f"{base_url}/actor-runs/{run_id}/dataset/items",
-            params={"token": APIFY_TOKEN},
-            timeout=30,
-        )
-
-        if results_response.status_code == 200:
-            jobs = results_response.json()
-            print(f"  Found {len(jobs)} jobs")
-            all_jobs.extend(jobs)
-
-    return all_jobs
-
-
-def normalize_apify(jobs: list) -> list:
-    """Normalize Apify results to our standard format."""
-    normalized = []
-    seen_ids = set()
-
-    for job in jobs:
-        job_id = job.get("jobId", job.get("id", job.get("link", "")))
-        if job_id in seen_ids:
-            continue
-        seen_ids.add(job_id)
-
-        desc = job.get("description", job.get("descriptionText", ""))
-        salary = job.get("salary", job.get("salaryInfo", ""))
-        if not salary and desc:
-            salary = _extract_salary(desc)
-
-        normalized.append({
-            "id": job_id,
-            "title": job.get("title", job.get("jobTitle", "")),
-            "company": job.get("company", job.get("companyName", "")),
-            "location": job.get("location", job.get("jobLocation", "")),
-            "description": desc,
-            "url": job.get("link", job.get("jobUrl", job.get("url", ""))),
-            "posted_date": job.get("postedAt", job.get("publishedAt", job.get("postedDate", ""))),
-            "salary": salary,
-            "employment_type": job.get("employmentType", job.get("contractType", "")),
-            "seniority_level": job.get("seniorityLevel", job.get("experienceLevel", "")),
-            "industries": job.get("industries", []),
-            "job_functions": job.get("jobFunctions", []),
-            "applicants": job.get("applicants", job.get("numberOfApplicants", "")),
-            "fetched_at": datetime.now().isoformat(),
-            "source": "linkedin_apify",
-        })
-
-    return normalized
-
-
 # --- Save ---
 
 ALL_JOBS_FILE = DATA_DIR / "all-jobs.json"
@@ -382,13 +250,7 @@ def _dedup_key(job):
 # --- Main ---
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch jobs from multiple sources")
-    parser.add_argument(
-        "--source",
-        choices=["jsearch", "apify"],
-        default="jsearch",
-        help="Job source (default: jsearch)",
-    )
+    parser = argparse.ArgumentParser(description="Fetch jobs via JSearch (RapidAPI)")
     parser.add_argument(
         "--keywords",
         nargs="+",
@@ -415,30 +277,22 @@ def main():
     args = parser.parse_args()
     locations = args.locations or [DEFAULT_LOCATION, "Remote"]
 
-    print(f"Job Fetcher ({args.source.upper()})")
+    print("Job Fetcher (JSEARCH)")
     print("=" * 50)
-    print(f"Source: {args.source}")
     print(f"Keywords: {args.keywords}")
     print(f"Locations: {locations}")
     print(f"Max jobs per keyword: {args.max_jobs}")
 
-    if args.source == "jsearch":
-        requests_estimate = len(args.keywords) * len(locations)
-        print(f"Estimated requests: {requests_estimate} (of 500/month free)")
-    else:
-        print(f"Estimated requests: {len(args.keywords)} (of 30/month free)")
+    requests_estimate = len(args.keywords) * len(locations)
+    print(f"Estimated requests: {requests_estimate} (of 500/month free)")
 
     print("=" * 50)
 
-    if args.source == "jsearch":
-        raw_jobs = fetch_jsearch(args.keywords, locations, args.max_jobs)
-        normalized = normalize_jsearch(raw_jobs)
-    else:
-        raw_jobs = fetch_apify(args.keywords, locations, args.max_jobs)
-        normalized = normalize_apify(raw_jobs)
+    raw_jobs = fetch_jsearch(args.keywords, locations, args.max_jobs)
+    normalized = normalize_jsearch(raw_jobs)
 
     if normalized:
-        save_jobs(normalized, args.output, args.source)
+        save_jobs(normalized, args.output, "jsearch")
         print(f"\nTotal unique jobs: {len(normalized)}")
     else:
         print("\nNo jobs found. Check your API key and search parameters.")

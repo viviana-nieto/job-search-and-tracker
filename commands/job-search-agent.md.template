@@ -112,13 +112,11 @@ Fetch jobs from configured search sources. Defaults to JSearch (RapidAPI).
 
 **Variants:**
 - `fetch jobs` -- default search with configured keywords and locations
-- `fetch jobs --source apify` -- use LinkedIn via Apify instead of JSearch
 - `fetch jobs for [keywords]` -- search with specific keywords (e.g., `fetch jobs for Product Manager AI`)
 - `fetch jobs in [locations]` -- search in specific locations (e.g., `fetch jobs in New York, Remote`)
 
 ```bash
 cd {{project_dir}} && python3 scripts/fetch_jobs.py
-cd {{project_dir}} && python3 scripts/fetch_jobs.py --source apify
 cd {{project_dir}} && python3 scripts/fetch_jobs.py --keywords "Product Manager" "AI PM"
 cd {{project_dir}} && python3 scripts/fetch_jobs.py --locations "New York" "Remote"
 ```
@@ -468,7 +466,7 @@ PDFs are saved to `~/Downloads/` by default.
 ## Error Handling
 
 1. **Missing config**: If `config/profile.json` does not exist, tell the user to run `python3 setup.py` first.
-2. **Missing API keys**: If `RAPIDAPI_KEY` or `APIFY_TOKEN` is not set, explain how to get one and set the environment variable.
+2. **Missing API keys**: If `RAPIDAPI_KEY` is not set, explain how to get one and set the environment variable.
 3. **Missing connections file**: If `data/connections.csv` is not found, explain how to export LinkedIn connections (Settings > Data privacy > Get a copy of your data > Connections).
 4. **Missing outreach history**: If `data/outreach-history.json` is not found, create a blank one with the structure: `{"metadata": {"last_updated": ""}, "connections": [], "applications": [], "stats": {"total_connections_sent": 0, "responses_received": 0, "interviews_scheduled": 0}}`.
 5. **Character limit exceeded**: If a connection request exceeds 300 characters, automatically trim by removing pleasantries first, then shortening credibility, then simplifying the CTA.

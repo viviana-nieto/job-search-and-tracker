@@ -157,19 +157,17 @@ cd {{project_dir}} && python3 scripts/score_messages.py
 
 ### fetch_jobs.py
 
-Fetch jobs from multiple sources (JSearch via RapidAPI or LinkedIn via Apify). Deduplicates results and maintains a master job repository.
+Fetch jobs via JSearch (RapidAPI). Searches across LinkedIn, Indeed, Glassdoor, and ZipRecruiter. Deduplicates results and maintains a master job repository.
 
 ```bash
 cd {{project_dir}} && python3 scripts/fetch_jobs.py
-cd {{project_dir}} && python3 scripts/fetch_jobs.py --source apify
 cd {{project_dir}} && python3 scripts/fetch_jobs.py --keywords "Product Manager" "AI PM"
 cd {{project_dir}} && python3 scripts/fetch_jobs.py --locations "New York" "Remote"
-cd {{project_dir}} && python3 scripts/fetch_jobs.py --source jsearch --keywords "Data Analyst" --max-jobs 50
+cd {{project_dir}} && python3 scripts/fetch_jobs.py --keywords "Data Analyst" --max-jobs 50
 ```
 
 **Environment variables required:**
 - `RAPIDAPI_KEY` for JSearch (free: 500 req/month)
-- `APIFY_TOKEN` for Apify/LinkedIn (free: 30 req/month)
 
 ---
 
