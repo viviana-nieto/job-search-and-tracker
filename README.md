@@ -177,20 +177,51 @@ The CSV should have columns: `First Name`, `Last Name`, `URL`, `Email Address`, 
 
 ### JSearch (RapidAPI) - Recommended
 
-1. Create a free account at [RapidAPI](https://rapidapi.com/)
-2. Subscribe to [JSearch](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch) (free tier: 500 requests/month)
-3. Copy your API key from the RapidAPI dashboard
-4. Set it: `export RAPIDAPI_KEY=your_key`
+JSearch aggregates listings from LinkedIn, Indeed, Glassdoor, and ZipRecruiter in a single API call. Free tier gives you 500 requests/month.
 
-JSearch aggregates listings from LinkedIn, Indeed, Glassdoor, and ZipRecruiter in a single API call.
+**Step-by-step setup:**
+
+1. Go to [https://rapidapi.com/](https://rapidapi.com/) and create a free account (you can sign up with Google or GitHub)
+2. Go to the JSearch API page: [https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch)
+3. Click **"Subscribe to Test"** and select the **Basic (Free)** plan (500 requests/month, no credit card required)
+4. After subscribing, you'll see the API playground. Your API key is shown in the **X-RapidAPI-Key** header field. Copy it.
+5. Set the environment variable:
+   ```bash
+   # Add to your ~/.zshrc or ~/.bashrc for persistence:
+   export RAPIDAPI_KEY=your_key_here
+   ```
+6. Verify it works:
+   ```bash
+   cd /path/to/job-search-agent
+   python3 scripts/fetch_jobs.py --keywords "Software Engineer" --locations "Remote"
+   ```
+
+**Usage notes:**
+- Each keyword + location combination = 1 API request
+- Default search (8 keywords x 2 locations) = ~16 requests per fetch
+- Free tier resets monthly. At 1 fetch/day you'll use ~480 of 500 requests.
 
 ### Apify (LinkedIn Direct) - Alternative
 
-1. Create a free account at [Apify](https://apify.com/)
-2. Go to [Account Integrations](https://console.apify.com/account/integrations) to get your API token
-3. Set it: `export APIFY_TOKEN=your_token`
+Apify scrapes LinkedIn directly for job listings. Free tier gives you 30 requests/month. Best as a supplement to JSearch for LinkedIn-only results.
 
-Apify scrapes LinkedIn directly (free tier: 30 requests/month). Use `--source apify` when fetching jobs.
+**Step-by-step setup:**
+
+1. Go to [https://apify.com/](https://apify.com/) and create a free account
+2. Go to [Account Integrations](https://console.apify.com/account/integrations) to find your API token
+3. Copy the token and set the environment variable:
+   ```bash
+   export APIFY_TOKEN=your_token_here
+   ```
+4. Use it with the `--source apify` flag:
+   ```bash
+   python3 scripts/fetch_jobs.py --source apify
+   ```
+
+**Usage notes:**
+- Each keyword search = 1 API request (locations are bundled)
+- Free tier is limited (30/month), so use JSearch as your primary source
+- Apify results are LinkedIn-only but often include more detailed job descriptions
 
 ## License
 

@@ -834,9 +834,12 @@ def run_interactive_setup():
     print()
     print("  Next steps:")
     print(f"    1. Review your config files in {CONFIG_DIR}")
-    print(f"    2. Set API keys: export RAPIDAPI_KEY=... (for job fetching)")
-    print(f"    3. Install dependencies: pip install -r {PROJECT_DIR / 'requirements.txt'}")
-    print(f"    4. Try: /job-search-agent in Claude Code")
+    print(f"    2. Set up job fetching API (free):")
+    print(f"       - Go to https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch")
+    print(f"       - Subscribe to the free Basic plan (500 requests/month)")
+    print(f"       - Copy your API key and run: export RAPIDAPI_KEY=your_key")
+    print(f"    3. Try: /job-search-agent fetch jobs")
+    print(f"    4. See README.md for full API setup guide")
     print()
 
 
