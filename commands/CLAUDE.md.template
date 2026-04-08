@@ -23,6 +23,19 @@ An AI-powered job search assistant that manages outreach, cover letters, connect
 
 ---
 
+## Humanizer Rules
+
+All generated outreach content must sound human. Avoid AI writing patterns:
+- No banned vocabulary (delve, tapestry, pivotal, crucial, foster, nestled, vibrant, etc.)
+- No filler phrases or significance inflation
+- Use "is"/"are" not "serves as"/"stands as"
+- No em dashes, no -ing phrases for fake depth
+- Vary sentence length, use active voice, be specific
+- After drafting, self-check: "What makes this sound AI-generated?" and fix tells.
+- Full rules: `config/humanizer-rules.json`
+
+---
+
 ## Data Locations
 
 | File | Path |
@@ -112,6 +125,16 @@ Generate LinkedIn outreach messages (connection requests, InMails, LinkedIn mess
 cd {{project_dir}} && python3 scripts/smart_template.py --name "Sarah" --company "Plaid" --job-title "Product Manager" --role recruiter --type connection-request
 cd {{project_dir}} && python3 scripts/smart_template.py --name "Mike" --company "Google" --job-title "Senior PM" --role hiring-manager --type inmail
 cd {{project_dir}} && python3 scripts/smart_template.py --name "Lisa" --company "Notion" --job-title "PM" --role peer --type linkedin-message
+```
+
+### tailor resume
+
+Tailor the base resume to match a specific job description.
+
+```bash
+# Usage: tailor resume for [company] [role]
+# The agent reads the base resume, applies the resume-tailoring template,
+# and saves the tailored version to outputs/YYYY-MM-DD/[company-slug]-[role-slug]/resume-tailored.md
 ```
 
 ### generate_pdf.py

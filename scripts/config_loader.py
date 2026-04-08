@@ -58,11 +58,60 @@ def get_first_name():
     return get_name().split()[0] if get_name() else ""
 
 
-def get_sign_off(context="linkedin"):
-    """Return the appropriate sign-off for a given context."""
+def get_languages():
+    """Return list of supported languages from profile."""
+    profile = load_profile()
+    return profile.get("languages", ["en"])
+
+
+def get_default_language():
+    """Return default language."""
+    profile = load_profile()
+    return profile.get("default_language", "en")
+
+
+def get_resume_path():
+    """Return the path to the user's base resume."""
+    profile = load_profile()
+    return profile.get("resume_path", "")
+
+
+def get_sign_off(context="linkedin", language=None):
+    """Return the appropriate sign-off for a given context.
+
+    Supports both flat and nested sign_offs structures:
+      Flat:   {"linkedin": "~Jane", "email": "Best,"}
+      Nested: {"en": {"linkedin": "~Jane"}, "es": {"linkedin": "~Jane"}}
+    """
     style = load_writing_style()
     sign_offs = style.get("sign_offs", {})
+
+    # Detect nested structure: if any top-level value is a dict, it's nested
+    is_nested = any(isinstance(v, dict) for v in sign_offs.values())
+
+    if is_nested:
+        if language is None:
+            language = get_default_language()
+        lang_sign_offs = sign_offs.get(language, sign_offs.get("en", {}))
+        return lang_sign_offs.get(context, lang_sign_offs.get("default", f"~{get_first_name()}"))
+
+    # Flat structure (backwards-compatible)
     return sign_offs.get(context, sign_offs.get("default", f"~{get_first_name()}"))
+
+
+def load_template(template_name, language=None):
+    """Load a template file for the given language.
+
+    Falls back to default_language, then to 'en'.
+    """
+    if language is None:
+        language = get_default_language()
+    template_dir = PROJECT_DIR / "templates" / language
+    if not template_dir.exists():
+        template_dir = PROJECT_DIR / "templates" / "en"
+    filepath = template_dir / f"{template_name}.md"
+    with open(filepath) as f:
+        return f.read()
 
 
 def get_credibility(length="short"):
@@ -105,7 +154,7 @@ def get_default_locations():
     return result
 
 
-def render_template(template_str, extra_vars=None):
+def render_template(template_str, extra_vars=None, language=None):
     """Replace {{placeholder}} patterns in a template string with config values.
 
     Built-in variables:
@@ -114,6 +163,7 @@ def render_template(template_str, extra_vars=None):
         {{cred_short}}, {{cred_medium}}, {{cred_long}}
 
     Extra variables can be passed as a dict.
+    Language can be specified for language-aware sign-offs.
     """
     profile = load_profile()
     contact = profile.get("contact", {})
@@ -126,9 +176,9 @@ def render_template(template_str, extra_vars=None):
         "phone": contact.get("phone", ""),
         "website": contact.get("website", ""),
         "location": contact.get("location", ""),
-        "sign_off_linkedin": get_sign_off("linkedin"),
-        "sign_off_email": get_sign_off("email"),
-        "sign_off_formal": get_sign_off("formal"),
+        "sign_off_linkedin": get_sign_off("linkedin", language=language),
+        "sign_off_email": get_sign_off("email", language=language),
+        "sign_off_formal": get_sign_off("formal", language=language),
         "cred_short": get_credibility("short"),
         "cred_medium": get_credibility("medium"),
         "cred_long": get_credibility("long"),

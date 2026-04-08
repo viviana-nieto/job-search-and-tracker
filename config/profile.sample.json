@@ -44,5 +44,8 @@
     "medium": "PM with 8 years of experience building AI and fintech products, from 0-to-1 launches to scaling platforms to millions of users",
     "long": "Over the past 8 years, I have built and scaled products across AI, fintech, and enterprise SaaS. At TechCorp, I led the AI product launch that reached 1M users in 6 months. At StartupCo, I built the payment platform from scratch to $200M in annual volume. I bring a metrics-first approach to product strategy, grounded in strong technical fundamentals and a bias for shipping."
   },
-  "quantified_impact": "$500M+ in documented business impact across AI and fintech products"
+  "quantified_impact": "$500M+ in documented business impact across AI and fintech products",
+  "languages": ["en", "es"],
+  "default_language": "en",
+  "resume_path": "/path/to/your/resume.pdf"
 }

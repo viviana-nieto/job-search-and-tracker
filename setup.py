@@ -117,6 +117,11 @@ def collect_personal_info():
     website = ask("Website or LinkedIn URL", required=False)
     location = ask("Location (e.g. 'San Francisco Bay Area')", default="San Francisco Bay Area")
 
+    # Languages
+    print("\n  Which languages do you want to generate outreach in?")
+    languages = ask_list("Languages", default="en, es")
+    default_language = ask("Default language", default=languages[0] if languages else "en")
+
     return {
         "name": name,
         "title": title,
@@ -126,6 +131,8 @@ def collect_personal_info():
             "website": website,
             "location": location,
         },
+        "languages": languages,
+        "default_language": default_language,
     }
 
 
@@ -313,14 +320,31 @@ def collect_search_preferences():
 # Section: Writing Style
 # ---------------------------------------------------------------------------
 
-def collect_writing_style(first_name):
+def collect_writing_style(first_name, languages=None):
     """Collect sign-offs, PM phrases, and writing rules."""
+    if languages is None:
+        languages = ["en"]
     heading("5. Writing Style Preferences")
 
-    subheading("Sign-offs")
-    sign_linkedin = ask("LinkedIn sign-off", default=f"~{first_name}")
-    sign_email = ask("Email sign-off", default="Best,")
-    sign_formal = ask("Formal sign-off", default="Regards,")
+    print("\n  Sign-offs (per language):")
+    sign_offs = {}
+    for lang in languages:
+        print(f"\n  [{lang.upper()}]:")
+        if lang == "es":
+            linkedin_default = f"~{first_name}"
+            email_default = "Saludos,"
+            formal_default = "Atentamente,"
+        else:
+            linkedin_default = f"~{first_name}"
+            email_default = "Best,"
+            formal_default = "Regards,"
+
+        sign_offs[lang] = {
+            "linkedin": ask(f"LinkedIn sign-off ({lang})", default=linkedin_default),
+            "email": ask(f"Email sign-off ({lang})", default=email_default),
+            "formal": ask(f"Formal sign-off ({lang})", default=formal_default),
+            "default": f"~{first_name}",
+        }
 
     subheading("PM Phrasing")
     print("  How should you be described when reaching out to different company types?\n")
@@ -358,19 +382,22 @@ def collect_writing_style(first_name):
     if extra_rules:
         rules.extend([r.strip() for r in extra_rules.split(",") if r.strip()])
 
+    print("\n  Humanizer (removes AI-sounding patterns from generated content):")
+    humanizer_enabled = ask("Enable humanizer?", default="yes").lower() in ("yes", "y", "true", "1")
+
     return {
-        "sign_offs": {
-            "linkedin": sign_linkedin,
-            "email": sign_email,
-            "formal": sign_formal,
-            "default": sign_linkedin,
-        },
+        "sign_offs": sign_offs,
         "pm_phrases": {
             "startup": pm_startup,
             "large": pm_large,
             "unknown": "PM",
         },
         "writing_rules": rules,
+        "humanizer": {
+            "enabled": humanizer_enabled,
+            "rules_file": "config/humanizer-rules.json",
+            "self_check": True,
+        },
     }
 
 
@@ -430,9 +457,9 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
             "{{cred_short}}": profile["credibility"]["short"],
             "{{cred_medium}}": profile["credibility"]["medium"],
             "{{cred_long}}": profile["credibility"]["long"],
-            "{{sign_off_linkedin}}": writing_style["sign_offs"]["linkedin"],
-            "{{sign_off_email}}": writing_style["sign_offs"]["email"],
-            "{{sign_off_formal}}": writing_style["sign_offs"]["formal"],
+            "{{sign_off_linkedin}}": writing_style["sign_offs"].get("en", next(iter(writing_style["sign_offs"].values()), {})).get("linkedin", ""),
+            "{{sign_off_email}}": writing_style["sign_offs"].get("en", next(iter(writing_style["sign_offs"].values()), {})).get("email", ""),
+            "{{sign_off_formal}}": writing_style["sign_offs"].get("en", next(iter(writing_style["sign_offs"].values()), {})).get("formal", ""),
             "{{filename_prefix}}": profile.get("filename_prefix", ""),
         }
         for key, value in replacements.items():
@@ -509,10 +536,12 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
     lines.append("## Writing Style")
     lines.append("")
     lines.append("### Sign-offs")
-    lines.append(f"- LinkedIn: `{writing_style['sign_offs']['linkedin']}`")
-    lines.append(f"- Email: `{writing_style['sign_offs']['email']}`")
-    lines.append(f"- Formal: `{writing_style['sign_offs']['formal']}`")
-    lines.append("")
+    for lang, offs in writing_style["sign_offs"].items():
+        lines.append(f"#### [{lang.upper()}]")
+        lines.append(f"- LinkedIn: `{offs['linkedin']}`")
+        lines.append(f"- Email: `{offs['email']}`")
+        lines.append(f"- Formal: `{offs['formal']}`")
+        lines.append("")
     lines.append("### PM Phrasing")
     lines.append(f"- Startups: \"{writing_style['pm_phrases']['startup']}\"")
     lines.append(f"- Large companies: \"{writing_style['pm_phrases']['large']}\"")
@@ -522,6 +551,18 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
     for rule in writing_style["writing_rules"]:
         lines.append(f"- {rule}")
     lines.append("")
+
+    # Humanizer
+    humanizer = writing_style.get("humanizer", {})
+    if humanizer.get("enabled"):
+        lines.append("### Humanizer")
+        lines.append("")
+        lines.append("Humanizer is **enabled**. All generated outreach content is post-processed")
+        lines.append(f"using rules from `{humanizer.get('rules_file', 'config/humanizer-rules.json')}`")
+        lines.append("to remove AI-sounding patterns and ensure natural, human-written tone.")
+        if humanizer.get("self_check"):
+            lines.append("Self-check mode is on: the agent will review its own output for AI patterns.")
+        lines.append("")
 
     # Project structure
     lines.append("## Project Structure")
@@ -665,6 +706,9 @@ def generate_skill_file(profile):
     lines.append(f"3. Use the templates in `{PROJECT_DIR / 'templates'}` for message structure.")
     lines.append(f"4. Save all generated outputs to `{PROJECT_DIR / 'outputs'}`.")
     lines.append(f"5. Follow writing rules from `{CONFIG_DIR / 'writing-style.json'}`.")
+    lines.append(f"6. If humanizer is enabled in writing-style.json, apply humanizer rules")
+    lines.append(f"   from `{CONFIG_DIR / 'humanizer-rules.json'}` to all generated content")
+    lines.append(f"   to remove AI-sounding patterns before finalizing output.")
     lines.append("")
 
     return "\n".join(lines)
@@ -714,7 +758,8 @@ def run_interactive_setup():
 
     # ---- 5. Writing Style ----
     first_name = personal["name"].split()[0]
-    writing_style = collect_writing_style(first_name)
+    languages = personal.get("languages", ["en"])
+    writing_style = collect_writing_style(first_name, languages=languages)
 
     # ---- 6. Talking Points ----
     talking_points = collect_talking_points()
@@ -733,6 +778,8 @@ def run_interactive_setup():
         },
         "credibility": credibility,
         "quantified_impact": quantified_impact,
+        "languages": personal.get("languages", ["en"]),
+        "default_language": personal.get("default_language", "en"),
     }
 
     # ---- Write config files ----

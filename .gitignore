@@ -1,6 +1,7 @@
 # Config files (keep samples)
 config/*.json
 !config/*.sample.json
+!config/humanizer-rules.json
 
 # Data files
 data/connections.csv

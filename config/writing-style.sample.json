@@ -1,9 +1,17 @@
 {
   "sign_offs": {
-    "linkedin": "~Jane",
-    "email": "Best,\nJane",
-    "formal": "Warm regards,",
-    "default": "~Jane"
+    "en": {
+      "linkedin": "~Jane",
+      "email": "Best,\nJane",
+      "formal": "Warm regards,",
+      "default": "~Jane"
+    },
+    "es": {
+      "linkedin": "~Jane",
+      "email": "Saludos,\nJane",
+      "formal": "Atentamente,",
+      "default": "~Jane"
+    }
   },
   "pm_phrases": {
     "startup": "product leader",
@@ -24,5 +32,10 @@
     "Keep LinkedIn connection requests under 300 characters",
     "Every email needs exactly 5 subject line variants",
     "Cover letters must be one page maximum"
-  ]
+  ],
+  "humanizer": {
+    "enabled": true,
+    "rules_file": "config/humanizer-rules.json",
+    "self_check": true
+  }
 }

@@ -16,6 +16,16 @@ This skill activates when the user runs `/job-search-agent` or makes job search-
 
 ---
 
+## Language Support
+
+- **Default language**: Uses `default_language` from `config/profile.json` for all generated content
+- **Per-job override**: In the HTML job browser, each job has a language dropdown. The selected language is saved in `selected-jobs.json` and used by `run pipeline`.
+- **Per-command override**: Any content command accepts a language suffix: `write cover letter for Acme PM in spanish`, `tailor resume for Google SWE in english`
+- **Templates**: Each language has its own template set in `templates/{language}/` (e.g., `templates/en/`, `templates/es/`)
+- **Sign-offs**: Language-specific sign-offs are configured in `config/writing-style.json`
+
+---
+
 ## Data Sources
 
 | Data | Path |
@@ -59,6 +69,35 @@ Produce cover letters, connection requests, emails, or summaries using templates
 
 ---
 
+## Anti-AI Writing Check
+
+All generated content MUST pass a humanizer check before presenting to the user. Follow these rules from `config/humanizer-rules.json`:
+
+### Vocabulary Bans
+Never use these words: delve, tapestry, landscape (figurative), pivotal, crucial, foster, underscores, highlights, showcasing, nestled, vibrant, groundbreaking, renowned, breathtaking, testament, enduring, interplay, intricate, garner, encompasses.
+
+Never use these phrases: "it's not just about", "at its core", "the real question is", "let's dive in", "serves as a", "stands as a", "a testament to", "plays a crucial role", "in today's rapidly evolving".
+
+### Structure Rules
+- Use "is"/"are" instead of "serves as"/"stands as"/"represents"
+- No em dashes. Use commas or periods.
+- No -ing phrases for fake depth (highlighting, showcasing, reflecting)
+- Vary sentence length naturally
+- Use active voice. Name the actor.
+- No rule-of-three unless genuinely three items
+
+### Tone Rules
+- Be specific with real numbers and details, not vague claims
+- Don't inflate importance. Simple facts need no ceremony.
+- Cut filler: "in order to" -> "to", "due to the fact that" -> "because"
+- No generic positive conclusions
+- No sycophantic language
+
+### Self-Check
+After drafting any message, silently ask: "What makes this sound AI-generated?" Fix those tells before presenting.
+
+---
+
 ## Key Talking Points
 
 {{talking_points}}
@@ -84,21 +123,57 @@ cd {{project_dir}} && python3 scripts/fetch_jobs.py --keywords "Product Manager"
 cd {{project_dir}} && python3 scripts/fetch_jobs.py --locations "New York" "Remote"
 ```
 
-After fetching, summarize the results: total jobs found, new vs duplicate, and notable companies.
+After fetching, generate an interactive HTML file at `{{project_dir}}/outputs/daily-summaries/YYYY-MM-DD.html` with:
+- Company + role summaries for quick scanning
+- Salary ranges (extracted from job descriptions)
+- Full expandable job descriptions
+- A/B test connection request variants
+- **Language selector per job** (dropdown defaulting to the user's `default_language` from config, with all configured `languages` as options)
+- Checkboxes to select jobs + "Generate Application Materials" submit button
+- Filter by fetch date to see jobs from a specific day
+
+When the user submits selected jobs, export `selected-jobs.json` with the chosen language per job:
+```json
+[
+  {"id": "...", "title": "...", "company": "...", "language": "es", ...},
+  {"id": "...", "title": "...", "company": "...", "language": "en", ...}
+]
+```
 
 ---
 
 ### `run pipeline`
 
-Execute the full daily job search pipeline:
+After the user selects jobs from the HTML and downloads `selected-jobs.json`, generate application materials for EACH selected job.
 
-1. Fetch new jobs (`fetch_jobs.py`)
-2. Review and score new postings against search criteria
-3. Match connections for top opportunities
-4. Generate outreach for the best matches
-5. Produce a daily summary
+**Steps:**
+1. Find the most recent `selected-jobs*.json` in `~/Downloads/` (sorted by modification time). Move it to `data/selected-jobs.json`.
+2. Create `outputs/YYYY-MM-DD/` folder
+3. For EACH selected job:
+   a. Read the `language` field from the selected job (defaults to user's `default_language` if not set)
+   b. Create subfolder: `outputs/YYYY-MM-DD/[company-slug]-[role-slug]/`
+   c. Save full job description as `job-description.md`
+   d. Read the user's base resume
+   e. **Tailor resume**: Follow `templates/{language}/resume-tailoring.md` guidelines. Save as `resume-tailored.md` and generate PDF.
+   f. Generate **tailored** LinkedIn connection request for recruiter using `templates/{language}/connection-request.md` (under 300 chars). Save as `connection-request-recruiter.md`
+   g. Generate **personalized hiring manager message** using `templates/{language}/connection-request.md`. Save as `hiring-manager-message.md`
+   h. Write **tailored** cover letter using `templates/{language}/cover-letter.md`. Save as `cover-letter.md` and generate PDF.
+4. Generate `outputs/YYYY-MM-DD/summary.md` with links to all materials and PDF locations
+5. Present all materials to user for review
+6. After user approves, log each via `update_outreach.py`
 
-Save the daily summary to `{{project_dir}}/outputs/daily-summaries/YYYY-MM-DD.md`.
+**Output folder structure:**
+```
+outputs/YYYY-MM-DD/
+├── company-slug-role-slug/
+│   ├── job-description.md
+│   ├── cover-letter.md         (in selected language)
+│   ├── connection-request-recruiter.md
+│   ├── hiring-manager-message.md
+│   ├── resume-tailored.md      (in selected language)
+│   └── *.pdf
+└── summary.md
+```
 
 ---
 
@@ -106,12 +181,15 @@ Save the daily summary to `{{project_dir}}/outputs/daily-summaries/YYYY-MM-DD.md
 
 Generate a tailored cover letter for a specific company and role.
 
+**Language:** Uses `default_language` from config. User can override with `in spanish`, `in english`, `en espanol`, etc.
+
 **Steps:**
-1. Load the job description from `data/jobs/` if saved, or ask user to provide it
-2. Read `templates/cover-letter.md` for structure
-3. Load profile, talking points, and writing style
-4. Write the cover letter, tailoring credibility and value props to the role
-5. Save to `{{project_dir}}/outputs/cover-letters/[company]-[role-slug].md`
+1. Determine language (from user request or `default_language`)
+2. Load the job description from `data/jobs/` if saved, or ask user to provide it
+3. Read `templates/{language}/cover-letter.md` for structure
+4. Load profile, talking points, and writing style
+5. Write the cover letter, tailoring credibility and value props to the role
+6. Save to `{{project_dir}}/outputs/cover-letters/[company]-[role-slug].md`
 
 **Template variables:** Use `{{name}}`, `{{cred_long}}`, `{{sign_off_formal}}`, `{{title}}`, `{{phone}}`, `{{email}}`, `{{website}}` from config.
 
@@ -174,6 +252,23 @@ Create a Gmail draft using the Gmail MCP integration.
    - Subject: best subject line from the 5 variants
    - Body: the generated email
 3. Confirm draft creation and provide the Gmail link
+
+---
+
+### Resume Tailoring
+- `tailor resume for [company] [role]` - Tailor the base resume to match a specific job description
+- `tailor resume for [job description]` - Tailor using a pasted or saved job description
+
+**Language:** Uses `default_language` from config. User can override with `in spanish`, `in english`, etc.
+
+### For "tailor resume for [company] [role]":
+1. Determine language (from user request or `default_language`)
+2. Read the user's base resume from the configured resume path
+3. Read or ask for the full job description
+4. Follow `templates/{language}/resume-tailoring.md` guidelines
+5. Save tailored resume as `outputs/YYYY-MM-DD/[company-slug]-[role-slug]/resume-tailored.md`
+6. Generate PDF: `python3 scripts/generate_pdf.py --type resume --input [tailored.md] --company [Company]`
+7. Present the tailored resume to the user, highlighting what was changed and why
 
 ---
 
@@ -312,6 +407,9 @@ cd {{project_dir}} && python3 scripts/[script_name].py [args]
   outputs/
     cover-letters/
       [company]-[role-slug].md
+    YYYY-MM-DD/
+      [company-slug]-[role-slug]/
+        resume-tailored.md
     connection-requests/
       [name]-[company].md
     emails/
@@ -332,9 +430,16 @@ cd {{project_dir}} && python3 scripts/[script_name].py [args]
     talking-points.json
     writing-style.json
   templates/
-    cover-letter.md
-    connection-request.md
-    email-outreach.md
+    en/
+      cover-letter.md
+      resume-tailoring.md
+      connection-request.md
+      email-outreach.md
+    es/
+      cover-letter.md
+      resume-tailoring.md
+      connection-request.md
+      email-outreach.md
   scripts/
     config_loader.py
     fetch_jobs.py

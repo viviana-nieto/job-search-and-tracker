@@ -1,0 +1,34 @@
+{
+  "description": "Rules to ensure generated content sounds human, not AI-generated. Based on Wikipedia's Signs of AI Writing guide.",
+  "rules": {
+    "vocabulary_bans": {
+      "description": "Words and phrases that signal AI-generated text. Never use these.",
+      "banned_words": ["delve", "tapestry", "landscape", "pivotal", "crucial", "foster", "underscores", "highlights", "showcasing", "nestled", "vibrant", "groundbreaking", "renowned", "breathtaking", "testament", "enduring", "interplay", "intricate", "garner", "encompasses"],
+      "banned_phrases": ["it's not just about", "at its core", "the real question is", "let's dive in", "here's what you need to know", "in today's rapidly evolving", "I hope this helps", "let me know if", "serves as a", "stands as a", "marks a pivotal", "setting the stage", "in the heart of", "a testament to", "plays a crucial role"]
+    },
+    "structure_rules": [
+      "Vary sentence length. Mix short punchy sentences with longer ones.",
+      "Never use rule-of-three lists unless the content genuinely has exactly three items.",
+      "Use 'is' and 'are' instead of 'serves as', 'stands as', 'represents'.",
+      "Avoid em dashes. Use commas or periods instead.",
+      "Don't start consecutive sentences with the same word or structure.",
+      "Avoid -ing phrases tacked onto sentences for fake depth (highlighting, showcasing, reflecting).",
+      "Don't cycle through synonyms for the same thing. Pick one word and reuse it.",
+      "Use active voice. Name the actor.",
+      "No emojis in professional outreach.",
+      "No bold-colon list items (e.g., '**Speed:** faster results')."
+    ],
+    "tone_rules": [
+      "Have opinions. Don't just neutrally report.",
+      "Acknowledge complexity and mixed feelings when genuine.",
+      "Be specific rather than vague. Use real numbers, real names, real details.",
+      "Don't inflate importance. Simple facts don't need ceremony.",
+      "Avoid sycophantic openers like 'Great question!' or 'Absolutely!'.",
+      "No generic positive conclusions like 'exciting times lie ahead'.",
+      "Cut filler: 'in order to' -> 'to', 'due to the fact that' -> 'because'.",
+      "Don't hedge excessively. Say it or don't.",
+      "Skip persuasive authority tropes ('the real question is', 'at its core')."
+    ],
+    "self_check": "After generating content, ask: 'What makes this sound AI-generated?' Fix those tells."
+  }
+}
