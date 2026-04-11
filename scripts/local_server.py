@@ -12,8 +12,6 @@ Run:
 """
 
 import json
-import os
-import re
 import sys
 from datetime import date, datetime, timezone
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -21,55 +19,13 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent.parent
 DASHBOARD_DIR = PROJECT_DIR / "dashboard"
-TRACKING_FILE = PROJECT_DIR / "data" / "tracking.json"
-TRACKING_TEMPLATE = PROJECT_DIR / "data" / "tracking-template.json"
 ALL_JOBS_FILE = PROJECT_DIR / "data" / "jobs" / "all-jobs.json"
 PORT = 8777
 
-
-def _empty_tracking():
-    return {
-        "metadata": {"version": "3.0", "created": "", "last_updated": ""},
-        "applications": [],
-        "unlinked_outreach": [],
-        "legacy_applications": [],
-        "stats": {},
-    }
-
-
-def load_tracking():
-    if TRACKING_FILE.exists():
-        with open(TRACKING_FILE) as f:
-            return json.load(f)
-    return _empty_tracking()
-
-
-def save_tracking(data):
-    data.setdefault("metadata", {})
-    data["metadata"]["last_updated"] = date.today().isoformat()
-
-    all_outreach = []
-    for app in data.get("applications", []):
-        all_outreach.extend(app.get("outreach", []))
-    all_outreach.extend(data.get("unlinked_outreach", []))
-    positive = sum(1 for o in all_outreach if o.get("outcome") in ("accepted", "replied", "interview"))
-    interviews = sum(1 for o in all_outreach if o.get("outcome") == "interview")
-    data["stats"] = {
-        "total_applications": len(data.get("applications", [])),
-        "total_outreach_sent": len(all_outreach),
-        "positive_outcomes": positive,
-        "interviews_scheduled": interviews,
-    }
-
-    TRACKING_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(TRACKING_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
-    try:
-        from generate_data_js import generate
-        generate()
-    except Exception as e:
-        print(f"  (warning: generate_data_js failed: {e})")
+# Ensure the scripts dir is importable before we import tracking — the shared
+# module lives next to this file.
+sys.path.insert(0, str(Path(__file__).parent))
+import tracking  # noqa: E402
 
 
 class JobSearchHandler(SimpleHTTPRequestHandler):
@@ -86,7 +42,7 @@ class JobSearchHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/api/tracking":
-            self._send_json(load_tracking())
+            self._send_json(tracking.load())
             return
 
         if self.path == "/api/jobs":
@@ -110,69 +66,52 @@ class JobSearchHandler(SimpleHTTPRequestHandler):
             return
 
         if self.path == "/api/tracking":
-            save_tracking(data)
+            tracking.save(data)
             self._send_json({"status": "saved"})
             print(f"  Saved tracking data ({len(data.get('applications', []))} applications)")
             return
 
         if self.path == "/api/tracking/apply":
-            tracking = load_tracking()
+            tracking_data = tracking.load()
             company = data.get("company", "")
             role = data.get("role", "")
 
-            app = next(
-                (a for a in tracking["applications"]
-                 if a["company"].lower() == company.lower()
-                 and a.get("role", "").lower() == role.lower()),
-                None,
+            try:
+                from company_classifier import classify
+                size = classify(company)
+            except Exception:
+                size = "unknown"
+
+            app = tracking.find_or_create_application(
+                tracking_data,
+                company=company,
+                role=role,
+                company_size=size,
+                url=data.get("url"),
+                source=data.get("source", "linkedin"),
+                salary_range=data.get("salary_range"),
+                location=data.get("location"),
             )
+
             now_iso = datetime.now(timezone.utc).isoformat()
             today = date.today().isoformat()
-            if app:
-                app["status"] = "applied"
-                if not app["dates"].get("applied"):
-                    app["dates"]["applied"] = today
-                    app["dates"]["applied_at"] = now_iso
-            else:
-                slug = re.sub(r"[^a-z0-9]+", "-", f"{company} {role}".lower()).strip("-")
-                try:
-                    from company_classifier import classify
-                    size = classify(company)
-                except Exception:
-                    size = "unknown"
-                tracking["applications"].append({
-                    "id": f"{today}-{slug}",
-                    "company": company,
-                    "role": role,
-                    "url": data.get("url"),
-                    "source": data.get("source", "linkedin"),
-                    "company_size": size,
-                    "salary_range": data.get("salary_range"),
-                    "location": data.get("location"),
-                    "status": "applied",
-                    "dates": {
-                        "saved": today,
-                        "applied": today,
-                        "applied_at": now_iso,
-                        "rejected": None,
-                        "offer": None,
-                    },
-                    "cover_letter": None,
-                    "outreach": [],
-                    "notes": "",
-                })
+            app["status"] = "applied"
+            if not app.get("dates", {}).get("applied"):
+                app.setdefault("dates", {})
+                app["dates"]["applied"] = today
+                app["dates"]["applied_at"] = now_iso
 
-            save_tracking(tracking)
+            tracking.save(tracking_data)
             self._send_json({"status": "saved"})
             print(f"  Marked applied: {company} / {role}")
             return
 
         if self.path == "/api/tracking/outreach":
-            tracking = load_tracking()
+            tracking_data = tracking.load()
             company = data.get("company", "")
 
             app = next(
-                (a for a in tracking["applications"]
+                (a for a in tracking_data["applications"]
                  if a["company"].lower() == company.lower()),
                 None,
             )
@@ -180,29 +119,18 @@ class JobSearchHandler(SimpleHTTPRequestHandler):
                 self._send_json({"error": f"No application found for {company}"}, 404)
                 return
 
-            today = date.today().isoformat()
-            name = data.get("name", "")
-            slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-            msg = data.get("message", "")
-
-            outreach_entry = {
-                "id": f"outreach-{today}-{slug}",
-                "name": name,
-                "recipient_role": data.get("recipient_role", "unknown"),
-                "linkedin_url": data.get("linkedin_url"),
-                "type": data.get("type", "connection-request"),
-                "variant": data.get("variant"),
-                "message": msg,
-                "message_length": len(msg),
-                "dates": {"sent": today, "accepted": None, "replied": None, "interview": None},
-                "outcome": "pending",
-                "response_time_days": None,
-                "follow_ups": [],
-            }
-            app["outreach"].append(outreach_entry)
-            save_tracking(tracking)
+            outreach_entry = tracking.build_outreach_entry(
+                name=data.get("name", ""),
+                recipient_role=data.get("recipient_role", "unknown"),
+                msg_type=data.get("type", "connection-request"),
+                message=data.get("message", ""),
+                linkedin_url=data.get("linkedin_url"),
+                variant=data.get("variant"),
+            )
+            app.setdefault("outreach", []).append(outreach_entry)
+            tracking.save(tracking_data)
             self._send_json({"status": "saved"})
-            print(f"  Logged outreach: {name} at {company}")
+            print(f"  Logged outreach: {outreach_entry.get('name')} at {company}")
             return
 
         self.send_response(404)
@@ -218,11 +146,11 @@ class JobSearchHandler(SimpleHTTPRequestHandler):
             return
 
         if self.path.startswith("/api/tracking/outreach/"):
-            tracking = load_tracking()
+            tracking_data = tracking.load()
             outreach_id = self.path.split("/")[-1]
 
             found = False
-            for app in tracking["applications"]:
+            for app in tracking_data["applications"]:
                 for o in app.get("outreach", []):
                     if o["id"] == outreach_id:
                         for key in ("outcome", "recipient_role"):
@@ -252,7 +180,7 @@ class JobSearchHandler(SimpleHTTPRequestHandler):
                     break
 
             if found:
-                save_tracking(tracking)
+                tracking.save(tracking_data)
                 self._send_json({"status": "updated"})
             else:
                 self._send_json({"error": "Outreach not found"}, 404)
@@ -273,21 +201,13 @@ class JobSearchHandler(SimpleHTTPRequestHandler):
             print(f"  {args[0]}")
 
 
-def _ensure_tracking_file():
-    if TRACKING_FILE.exists():
-        return
-    TRACKING_FILE.parent.mkdir(parents=True, exist_ok=True)
-    if TRACKING_TEMPLATE.exists():
-        with open(TRACKING_TEMPLATE) as src, open(TRACKING_FILE, "w") as dst:
-            dst.write(src.read())
-    else:
-        with open(TRACKING_FILE, "w") as f:
-            json.dump(_empty_tracking(), f, indent=2)
-
-
 def main():
     sys.path.insert(0, str(PROJECT_DIR / "scripts"))
-    _ensure_tracking_file()
+
+    # Materialize tracking.json on disk so file-backed reads work from the
+    # moment the server starts. tracking.load() handles template copying and
+    # legacy migration lazily; the save() call persists the result.
+    tracking.save(tracking.load(), regen_js=False)
 
     if not DASHBOARD_DIR.exists():
         print(f"Error: dashboard directory not found at {DASHBOARD_DIR}")
@@ -306,7 +226,7 @@ def main():
     print(f"Dashboard: http://localhost:{PORT}/dashboard.html")
     print(f"All Jobs:  http://localhost:{PORT}/jobs.html")
     print(f"Companies: http://localhost:{PORT}/companies.html")
-    print(f"Tracking:  {TRACKING_FILE}")
+    print(f"Tracking:  {tracking.TRACKING_FILE}")
     print("Press Ctrl+C to stop\n")
 
     try:
