@@ -72,11 +72,13 @@ All generated outreach content must sound human. Avoid AI writing patterns:
 
 ## Skill Location
 
-The job search agent slash command is installed at:
+The `/job-search-agent` slash command is a project-local skill at:
 
 ```
-~/.claude/commands/job-search-agent.md
+{{project_dir}}/.claude/commands/job-search-agent.md
 ```
+
+It ships with the repo — no per-user installation. Available in Claude Code the moment this project is open. One entry point for setup, fetching, writing, tracking, and reporting; dispatches by subcommand (`/job-search-agent setup`, `/job-search-agent fetch jobs`, etc.).
 
 ---
 

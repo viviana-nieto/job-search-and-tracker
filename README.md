@@ -36,12 +36,14 @@ Everything the wizard does up to and including opening the dashboard runs on Pyt
 If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you can configure this project without opening a separate terminal. Open the repo in Claude Code and type:
 
 ```
-/setup
+/job-search-agent setup
 ```
 
-Claude Code loads the project-local `.claude/commands/setup.md` slash command and walks you through the same questions `python setup.py` asks, writes your config files, imports your LinkedIn connections, sets your RapidAPI key, and (optionally) fetches jobs and opens the dashboard — all in the Claude Code chat. This is often smoother than the terminal wizard because you never leave the window.
+Claude Code loads the project-local `.claude/commands/job-search-agent.md` slash command and walks you through the same questions `python setup.py` asks, writes your config files, imports your LinkedIn connections, sets your RapidAPI key, and (optionally) fetches jobs and opens the dashboard — all in the Claude Code chat. This is often smoother than the terminal wizard because you never leave the window.
 
-Both paths produce the same config files and end in the same state. Pick whichever is more convenient for you.
+After setup, the same `/job-search-agent` slash command handles daily commands too (`fetch jobs`, `write cover letter`, `show stats`, `score messages`, etc.). One entry point for everything. See [Available Commands](#available-commands) for the full list.
+
+Both setup paths produce the same config files and end in the same state. Pick whichever is more convenient for you.
 
 `python setup.py` walks you through everything:
 

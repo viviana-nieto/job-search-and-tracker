@@ -25,8 +25,11 @@ CONFIG_DIR = PROJECT_DIR / "config"
 COMMANDS_DIR = PROJECT_DIR / "commands"
 CLAUDE_MD_PATH = PROJECT_DIR / "CLAUDE.md"
 CLAUDE_MD_TEMPLATE = COMMANDS_DIR / "CLAUDE.md.template"
-SKILL_DIR = Path.home() / ".claude" / "commands"
-SKILL_FILE = SKILL_DIR / "job-search-agent.md"
+
+# Legacy user-global skill file. Used to be generated here; now we ship
+# .claude/commands/job-search-agent.md as a project-local slash command
+# instead. Keep the path around only to prompt for cleanup on upgrade.
+LEGACY_SKILL_FILE = Path.home() / ".claude" / "commands" / "job-search-agent.md"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -680,89 +683,42 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
 
 
 # ---------------------------------------------------------------------------
-# Generate Skill File
+# Legacy skill-file cleanup
 # ---------------------------------------------------------------------------
 
-def generate_skill_file(profile, writing_style=None, talking_points=None):
-    """Generate the ~/.claude/commands/job-search-agent.md skill file.
+def cleanup_legacy_user_skill():
+    """Remove the user-global ~/.claude/commands/job-search-agent.md file if it
+    still exists from a pre-refactor setup.py run.
 
-    If commands/job-search-agent.md.template exists, render it with placeholders.
-    Otherwise, generate a basic version.
+    The skill is now project-local at .claude/commands/job-search-agent.md,
+    which ships with the repo. Keeping the old user-global file around causes
+    a name collision with the project-local version. We prompt before deleting
+    because it's destructive.
     """
-    SKILL_TEMPLATE = COMMANDS_DIR / "job-search-agent.md.template"
+    if not LEGACY_SKILL_FILE.exists():
+        return
 
-    if SKILL_TEMPLATE.exists():
-        with open(SKILL_TEMPLATE) as f:
-            template = f.read()
-
-        # Build writing rules string
-        writing_rules_str = ""
-        if writing_style:
-            rules = writing_style.get("writing_rules", [])
-            writing_rules_str = "\n".join(f"- {rule}" for rule in rules)
-
-        # Build talking points string
-        talking_points_str = ""
-        if talking_points:
-            for industry, points in talking_points.items():
-                talking_points_str += f"\n### {industry}\n"
-                for point in points:
-                    talking_points_str += f"- {point}\n"
-
-        # Get sign-offs (handle nested structure)
-        sign_offs = writing_style.get("sign_offs", {}) if writing_style else {}
-        default_lang = profile.get("default_language", "en")
-        if any(isinstance(v, dict) for v in sign_offs.values()):
-            lang_offs = sign_offs.get(default_lang, sign_offs.get("en", {}))
-        else:
-            lang_offs = sign_offs
-
-        replacements = {
-            "{{project_dir}}": str(PROJECT_DIR),
-            "{{resume_path}}": profile.get("resume_path", ""),
-            "{{name}}": profile.get("name", ""),
-            "{{first_name}}": profile.get("name", "").split()[0] if profile.get("name") else "",
-            "{{title}}": profile.get("title", ""),
-            "{{email}}": profile.get("contact", {}).get("email", ""),
-            "{{phone}}": profile.get("contact", {}).get("phone", ""),
-            "{{website}}": profile.get("contact", {}).get("website", ""),
-            "{{location}}": profile.get("contact", {}).get("location", ""),
-            "{{email_account}}": profile.get("contact", {}).get("email", ""),
-            "{{filename_prefix}}": profile.get("filename_prefix", ""),
-            "{{cred_short}}": profile.get("credibility", {}).get("short", ""),
-            "{{cred_medium}}": profile.get("credibility", {}).get("medium", ""),
-            "{{cred_long}}": profile.get("credibility", {}).get("long", ""),
-            "{{sign_off_linkedin}}": lang_offs.get("linkedin", ""),
-            "{{sign_off_email}}": lang_offs.get("email", ""),
-            "{{sign_off_formal}}": lang_offs.get("formal", ""),
-            "{{writing_rules}}": writing_rules_str,
-            "{{talking_points}}": talking_points_str,
-        }
-
-        for key, value in replacements.items():
-            template = template.replace(key, str(value))
-
-        return template
-
-    # Fallback: generate a basic skill file
-    first_name = profile["name"].split()[0]
-    return f"""# /job-search-agent
-
-{first_name}'s job search automation agent.
-
-## Project Location
-
-- **Project root**: `{PROJECT_DIR}`
-- **Config**: `{CONFIG_DIR}`
-
-## Instructions
-
-1. Read the project CLAUDE.md at `{CLAUDE_MD_PATH}` for full context.
-2. Load config using `scripts/config_loader.py` functions.
-3. Use the templates in `{PROJECT_DIR / 'templates'}` for message structure.
-4. Save all generated outputs to `{PROJECT_DIR / 'outputs'}`.
-5. Follow writing rules from `{CONFIG_DIR / 'writing-style.json'}`.
-"""
+    print()
+    print("  Detected a legacy user-global skill file:")
+    print(f"    {LEGACY_SKILL_FILE}")
+    print()
+    print("  This project now ships the /job-search-agent slash command as a")
+    print("  project-local file at .claude/commands/job-search-agent.md that")
+    print("  travels with the repo. Keeping the old user-global file around")
+    print("  causes a name collision with the new project-local version.")
+    print()
+    if ask_yes_no("Delete the legacy file?", default="y"):
+        try:
+            LEGACY_SKILL_FILE.unlink()
+            print(f"  Removed {LEGACY_SKILL_FILE}")
+        except OSError as e:
+            print(f"  Could not remove file: {e}")
+            print("  You can delete it manually with:")
+            print(f"    rm {LEGACY_SKILL_FILE}")
+    else:
+        print("  Leaving the legacy file in place. You may see unexpected")
+        print("  behavior from /job-search-agent until you delete it manually:")
+        print(f"    rm {LEGACY_SKILL_FILE}")
 
 
 # ---------------------------------------------------------------------------
@@ -1202,12 +1158,13 @@ def run_interactive_setup():
         f.write(claude_md_content)
     print(f"  Created: {CLAUDE_MD_PATH}")
 
-    # ---- Generate skill file ----
-    SKILL_DIR.mkdir(parents=True, exist_ok=True)
-    skill_content = generate_skill_file(profile, writing_style, talking_points)
-    with open(SKILL_FILE, "w") as f:
-        f.write(skill_content)
-    print(f"  Created: {SKILL_FILE}")
+    # ---- Legacy skill file cleanup (upgrade path) ----
+    # The /job-search-agent slash command now lives at
+    # .claude/commands/job-search-agent.md and ships with the repo, so we
+    # no longer generate ~/.claude/commands/job-search-agent.md. If an old
+    # copy is sitting on disk from a prior setup.py run, prompt to remove it
+    # to avoid a name collision with the project-local version.
+    cleanup_legacy_user_skill()
 
     # ---- Initialize data files if they don't exist ----
     data_dir = PROJECT_DIR / "data"
@@ -1238,7 +1195,10 @@ def run_interactive_setup():
     print(f"    - {CONFIG_DIR / 'talking-points.json'}")
     print(f"    - {CONFIG_DIR / 'writing-style.json'}")
     print(f"    - {CLAUDE_MD_PATH}")
-    print(f"    - {SKILL_FILE}")
+    print()
+    print("  The /job-search-agent slash command is project-local at")
+    print(f"    {PROJECT_DIR / '.claude' / 'commands' / 'job-search-agent.md'}")
+    print("  It's available in Claude Code the moment this repo is open.")
 
     # ---- 9. First fetch + launch dashboard ----
     run_first_fetch_and_launch(search_criteria=search_criteria)
@@ -1289,15 +1249,14 @@ def run_from_config():
         f.write(claude_md_content)
     print(f"  Updated: {CLAUDE_MD_PATH}")
 
-    # Generate skill file
-    SKILL_DIR.mkdir(parents=True, exist_ok=True)
-    skill_content = generate_skill_file(profile, writing_style, talking_points)
-    with open(SKILL_FILE, "w") as f:
-        f.write(skill_content)
-    print(f"  Updated: {SKILL_FILE}")
+    # Legacy skill file cleanup — see run_interactive_setup for details
+    cleanup_legacy_user_skill()
 
     print()
-    print("  Done! CLAUDE.md and skill file regenerated from config.")
+    print("  Done! CLAUDE.md regenerated from config.")
+    print("  The /job-search-agent slash command is project-local and does")
+    print("  not need regeneration — edit .claude/commands/job-search-agent.md")
+    print("  directly if you need to customize it.")
     print()
 
 
