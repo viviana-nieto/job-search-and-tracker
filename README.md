@@ -75,7 +75,7 @@ python setup.py --fetch           # fetch + open dashboard without re-running se
 | `python scripts/dashboard.py --no-browser` | Same, but do not open the browser (for SSH/headless) |
 | `python scripts/fetch_jobs.py` | Fetch jobs, refresh connection matches, update dashboard data |
 | `python scripts/match_connections.py` | Manually refresh `connection-matches.json` |
-| `python scripts/migrate_outreach_to_tracking.py` | One-shot migration from legacy `outreach-history.json` to `tracking.json` |
+| `python scripts/migrate_outreach_to_tracking.py` | Explicitly trigger migration from legacy `outreach-history.json` to `tracking.json` (optional — tracking-aware scripts auto-migrate on first read) |
 
 ### Claude Code slash command
 
@@ -253,15 +253,31 @@ Pages:
 
 State is persisted to `data/tracking.json` (gitignored). The dashboard talks to the local server's `/api/*` endpoints while it's running and falls back to an embedded `dashboard/data.js` file otherwise.
 
+## Tests
+
+The test suite covers the tracking module and the scripts that depend on it. Tests use only Python's stdlib `unittest` — no extra dependencies to install — and each test isolates itself with `tempfile`, so running them never touches your real `data/tracking.json` or any other user data.
+
+```bash
+python -m unittest discover tests
+```
+
 ## Upgrading from a pre-dashboard clone
 
-If you have existing `data/outreach-history.json` from an older version:
+If you have an existing `data/outreach-history.json` from an older version, there's nothing you need to do. The tracking-aware scripts (`update_outreach.py`, `score_messages.py`, `local_server.py`, and anything else that touches tracking data) auto-migrate its contents into `data/tracking.json` the first time they run. You'll see a one-line notice in the script output like:
+
+```
+Migrated 3 legacy outreach entries from outreach-history.json.
+```
+
+The migration is idempotent and non-destructive — the legacy `outreach-history.json` file is left in place untouched, so you can keep it as a backup or delete it yourself once you've confirmed the new `data/tracking.json` looks right.
+
+If you'd rather trigger the migration explicitly — for example, right after upgrading and before running any other command — you can still run:
 
 ```bash
 python scripts/migrate_outreach_to_tracking.py
 ```
 
-This merges legacy entries into the new `data/tracking.json` schema non-destructively.
+This does exactly the same thing the auto-migration does, just on demand.
 
 ## License
 

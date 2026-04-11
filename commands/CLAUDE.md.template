@@ -44,7 +44,7 @@ All generated outreach content must sound human. Avoid AI writing patterns:
 | LinkedIn connections | {{project_dir}}/data/connections.csv |
 | Tracking (applications + outreach + stats) | {{project_dir}}/data/tracking.json |
 | Connection matches (jobs → connections) | {{project_dir}}/data/connection-matches.json |
-| Legacy outreach history (pre-v3.0) | {{project_dir}}/data/outreach-history.json |
+| Legacy outreach history (pre-v3.0) | {{project_dir}}/data/outreach-history.json (read-only; auto-migrated on first script run; never written) |
 | Company sizes | {{project_dir}}/data/company-sizes.json |
 | Saved jobs | {{project_dir}}/data/jobs/ |
 | All fetched jobs | {{project_dir}}/data/jobs/all-jobs.json |
@@ -53,7 +53,7 @@ All generated outreach content must sound human. Avoid AI writing patterns:
 | Talking points | {{project_dir}}/config/talking-points.json |
 | Writing style config | {{project_dir}}/config/writing-style.json |
 
-**Primary tracking file is `data/tracking.json`** (v3.0 unified schema with applications, outreach per application, unlinked_outreach, legacy_applications, and stats). Use the legacy `outreach-history.json` only for reading old data — write all new state to `tracking.json`. The local dashboard server (`scripts/local_server.py`) reads and writes `tracking.json` via its `/api/tracking*` endpoints.
+**All tracking now flows through `data/tracking.json`.** The `update_outreach.py` and `score_messages.py` CLIs (invoked by the Claude Code slash commands), the dashboard's local server, and `tracking.py` all read and write the same file. If a legacy `data/outreach-history.json` exists from a pre-refactor clone, `tracking.py` auto-migrates it into `tracking.json` on first access and leaves the legacy file untouched. Fresh installs never create the legacy file.
 
 ---
 
@@ -194,7 +194,7 @@ cd {{project_dir}} && python3 scripts/match_connections.py
 
 ### migrate_outreach_to_tracking.py
 
-One-shot migration from the legacy `data/outreach-history.json` format to the unified `data/tracking.json` schema. Idempotent — safe to re-run.
+One-shot migration from the legacy format to the unified schema. Most users never need to run this manually — `tracking.py` auto-migrates on first access. This script is kept for users who want to trigger migration explicitly.
 
 ```bash
 cd {{project_dir}} && python3 scripts/migrate_outreach_to_tracking.py
