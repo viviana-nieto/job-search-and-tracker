@@ -32,3 +32,6 @@ venv/
 
 # Auto-generated
 CLAUDE.md
+
+# Claude Code per-user local settings (per-machine, should not be shared)
+.claude/settings.local.json

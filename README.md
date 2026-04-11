@@ -31,6 +31,18 @@ python setup.py
 
 Everything the wizard does up to and including opening the dashboard runs on Python's standard library. The only two external packages — `requests` (for JSearch job fetching) and `reportlab` (for PDF export) — are installed lazily when you first opt into a job fetch. The wizard detects they're missing and prompts you before running `pip install -r requirements.txt`, so you can decline and still browse the dashboard.
 
+### Setup in Claude Code (alternative)
+
+If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you can configure this project without opening a separate terminal. Open the repo in Claude Code and type:
+
+```
+/setup
+```
+
+Claude Code loads the project-local `.claude/commands/setup.md` slash command and walks you through the same questions `python setup.py` asks, writes your config files, imports your LinkedIn connections, sets your RapidAPI key, and (optionally) fetches jobs and opens the dashboard — all in the Claude Code chat. This is often smoother than the terminal wizard because you never leave the window.
+
+Both paths produce the same config files and end in the same state. Pick whichever is more convenient for you.
+
 `python setup.py` walks you through everything:
 
 1. Personal info, career context, credibility snippets
