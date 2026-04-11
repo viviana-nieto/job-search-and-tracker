@@ -1214,23 +1214,6 @@ def run_interactive_setup():
     data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "jobs").mkdir(parents=True, exist_ok=True)
 
-    history_file = data_dir / "outreach-history.json"
-    if not history_file.exists():
-        history = {
-            "metadata": {
-                "created": __import__("datetime").date.today().isoformat(),
-                "last_updated": __import__("datetime").date.today().isoformat(),
-            },
-            "connections": [],
-            "applications": [],
-            "stats": {
-                "total_connections_sent": 0,
-                "responses_received": 0,
-                "interviews_scheduled": 0,
-            },
-        }
-        write_json(history_file, history)
-
     sizes_file = data_dir / "company-sizes.json"
     if not sizes_file.exists():
         write_json(sizes_file, {"large": [], "startup": []})
