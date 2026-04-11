@@ -26,12 +26,6 @@ COMMANDS_DIR = PROJECT_DIR / "commands"
 CLAUDE_MD_PATH = PROJECT_DIR / "CLAUDE.md"
 CLAUDE_MD_TEMPLATE = COMMANDS_DIR / "CLAUDE.md.template"
 
-# Legacy user-global skill file. Used to be generated here; now we ship
-# .claude/commands/job-search.md as a project-local slash command instead.
-# Keep the path around only to prompt for cleanup on upgrade — the legacy
-# filename was job-search-agent.md, so the constant does not change.
-LEGACY_SKILL_FILE = Path.home() / ".claude" / "commands" / "job-search-agent.md"
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -684,45 +678,6 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
 
 
 # ---------------------------------------------------------------------------
-# Legacy skill-file cleanup
-# ---------------------------------------------------------------------------
-
-def cleanup_legacy_user_skill():
-    """Remove the user-global ~/.claude/commands/job-search-agent.md file if it
-    still exists from a pre-refactor setup.py run.
-
-    The skill is now project-local at .claude/commands/job-search.md,
-    which ships with the repo. Keeping the old user-global file around causes
-    a name collision with the project-local version. We prompt before deleting
-    because it's destructive.
-    """
-    if not LEGACY_SKILL_FILE.exists():
-        return
-
-    print()
-    print("  Detected a legacy user-global skill file:")
-    print(f"    {LEGACY_SKILL_FILE}")
-    print()
-    print("  This project now ships the /job-search slash command as a")
-    print("  project-local file at .claude/commands/job-search.md that")
-    print("  travels with the repo. Keeping the old user-global file around")
-    print("  causes a name collision with the new project-local version.")
-    print()
-    if ask_yes_no("Delete the legacy file?", default="y"):
-        try:
-            LEGACY_SKILL_FILE.unlink()
-            print(f"  Removed {LEGACY_SKILL_FILE}")
-        except OSError as e:
-            print(f"  Could not remove file: {e}")
-            print("  You can delete it manually with:")
-            print(f"    rm {LEGACY_SKILL_FILE}")
-    else:
-        print("  Leaving the legacy file in place. You may see unexpected")
-        print("  behavior from /job-search until you delete it manually:")
-        print(f"    rm {LEGACY_SKILL_FILE}")
-
-
-# ---------------------------------------------------------------------------
 # Section: LinkedIn connections import
 # ---------------------------------------------------------------------------
 
@@ -1159,14 +1114,6 @@ def run_interactive_setup():
         f.write(claude_md_content)
     print(f"  Created: {CLAUDE_MD_PATH}")
 
-    # ---- Legacy skill file cleanup (upgrade path) ----
-    # The /job-search slash command now lives at
-    # .claude/commands/job-search.md and ships with the repo, so we
-    # no longer generate ~/.claude/commands/job-search-agent.md. If an old
-    # copy is sitting on disk from a prior setup.py run, prompt to remove it
-    # to avoid a name collision with the project-local version.
-    cleanup_legacy_user_skill()
-
     # ---- Initialize data files if they don't exist ----
     data_dir = PROJECT_DIR / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -1249,9 +1196,6 @@ def run_from_config():
     with open(CLAUDE_MD_PATH, "w") as f:
         f.write(claude_md_content)
     print(f"  Updated: {CLAUDE_MD_PATH}")
-
-    # Legacy skill file cleanup — see run_interactive_setup for details
-    cleanup_legacy_user_skill()
 
     print()
     print("  Done! CLAUDE.md regenerated from config.")
