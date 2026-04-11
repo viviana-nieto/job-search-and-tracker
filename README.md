@@ -1,58 +1,62 @@
 # Job Search Agent - AI-Powered Job Search Automation for Claude Code
 
-Automates job search networking by analyzing your resume, matching LinkedIn connections to opportunities, and generating personalized outreach content. Works as a Claude Code slash command (`/job-search-agent`).
+Automates job search networking by analyzing your resume, matching LinkedIn connections to opportunities, and generating personalized outreach content. Works as a Claude Code slash command (`/job-search-agent`) and ships with a local HTML dashboard for browsing fetched jobs, tracking applications, and seeing which of your connections work at target companies.
 
 ## Features
 
-- **Multi-source job fetching** - JSearch (RapidAPI) searches across LinkedIn, Indeed, Glassdoor, and ZipRecruiter
-- **Interactive HTML job browser** with salary ranges and apply links
-- **A/B tested LinkedIn connection requests** - 4 message variants (A/B/C/D) with character count enforcement (300 char limit)
+- **Guided first-run setup** — one command walks you through profile, connections import, keywords, API key, and first fetch
+- **Local HTML dashboard** — browse fetched jobs, mark applied, track outreach, see matched connections per job (served at `http://localhost:8777`)
+- **Multi-source job fetching** — JSearch (RapidAPI) searches across LinkedIn, Indeed, Glassdoor, and ZipRecruiter
+- **LinkedIn connection matching** — highlights jobs at companies where you already have a connection
+- **A/B tested LinkedIn connection requests** — 4 message variants (A/B/C/D) with character count enforcement (300 char limit)
 - **Tailored cover letters and resumes** per job, exported as professional PDFs
 - **Email outreach** with 5 subject line variants per recipient
 - **Gmail draft integration** for one-click sending
-- **Outreach tracking and performance analytics** - response rates by message type, company size, and recipient role
+- **Outreach tracking and performance analytics** — response rates by message type, company size, and recipient role
 - **Company size classification** for tone adjustment (startup vs. large company phrasing)
 
 ## Prerequisites
 
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (optional — the dashboard works standalone)
 - Python 3.9+
-- Free API key: [RapidAPI (JSearch)](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch)
+- Free API key: [RapidAPI (JSearch)](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch) — 200 requests/month on the free tier
 
 ## Quick Start
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/your-username/job-search-agent-open.git
-   cd job-search-agent-open
-   ```
+```bash
+git clone https://github.com/your-username/job-search-and-tracker.git
+cd job-search-and-tracker
+pip install -r requirements.txt
+python setup.py
+```
 
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+`python setup.py` walks you through everything:
 
-3. Set up your profile (interactive onboarding):
-   ```bash
-   python setup.py
-   ```
-   This creates your config files from the samples in `config/`. You can also copy and edit them manually:
-   ```bash
-   cp config/profile.sample.json config/profile.json
-   cp config/search-criteria.sample.json config/search-criteria.json
-   cp config/writing-style.sample.json config/writing-style.json
-   cp config/talking-points.sample.json config/talking-points.json
-   ```
+1. Personal info, career context, credibility snippets
+2. Job search preferences (roles, keywords, locations)
+3. Writing style and talking points
+4. **Import your LinkedIn connections** (optional — the wizard shows you how to export them)
+5. **RapidAPI key** (optional — the wizard walks you through signup)
+6. **First fetch + dashboard launch** — fetches jobs matching your keywords and opens the dashboard in your browser
 
-4. Set your API keys:
-   ```bash
-   export RAPIDAPI_KEY=your_jsearch_key
-   ```
+At the end of setup, your browser opens to `http://localhost:8777/dashboard.html` with your actual jobs loaded.
 
-5. In Claude Code, run:
-   ```
-   /job-search-agent fetch jobs
-   ```
+### Daily commands
+
+```bash
+python scripts/dashboard.py       # open the dashboard
+python scripts/fetch_jobs.py      # fetch more jobs + refresh matches
+python setup.py --connections     # re-import LinkedIn connections
+python setup.py --api-key         # update your RapidAPI key
+python setup.py --keywords        # update search keywords/locations
+python setup.py --fetch           # fetch + open dashboard without re-running setup
+```
+
+### From Claude Code
+
+```
+/job-search-agent fetch jobs
+```
 
 ## Available Commands
 
@@ -175,13 +179,13 @@ The CSV should have columns: `First Name`, `Last Name`, `URL`, `Email Address`, 
 
 ### JSearch (RapidAPI) - Recommended
 
-JSearch aggregates listings from LinkedIn, Indeed, Glassdoor, and ZipRecruiter in a single API call. Free tier gives you 500 requests/month.
+JSearch aggregates listings from LinkedIn, Indeed, Glassdoor, and ZipRecruiter in a single API call. Free tier gives you **200 requests/month**.
 
-**Step-by-step setup:**
+The easiest path is `python setup.py --api-key`, which walks you through RapidAPI signup, subscribing to the free plan, pasting your key, and appending it to your shell profile. Or do it manually:
 
 1. Go to [https://rapidapi.com/](https://rapidapi.com/) and create a free account (you can sign up with Google or GitHub)
 2. Go to the JSearch API page: [https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch)
-3. Click **"Subscribe to Test"** and select the **Basic (Free)** plan (500 requests/month, no credit card required)
+3. Click **"Subscribe to Test"** and select the **Basic (Free)** plan (200 requests/month, no credit card required)
 4. After subscribing, you'll see the API playground. Your API key is shown in the **X-RapidAPI-Key** header field. Copy it.
 5. Set the environment variable:
    ```bash
@@ -190,14 +194,41 @@ JSearch aggregates listings from LinkedIn, Indeed, Glassdoor, and ZipRecruiter i
    ```
 6. Verify it works:
    ```bash
-   cd /path/to/job-search-agent
+   cd /path/to/job-search-and-tracker
    python3 scripts/fetch_jobs.py --keywords "Software Engineer" --locations "Remote"
    ```
 
 **Usage notes:**
 - Each keyword + location combination = 1 API request
-- Default search (8 keywords x 2 locations) = ~16 requests per fetch
-- Free tier resets monthly. At 1 fetch/day you'll use ~480 of 500 requests.
+- A typical search (e.g., 4 keywords x 2 locations) = ~8 requests per fetch
+- Free tier resets monthly. At ~8 requests per fetch, the 200/month cap gives you ~25 fetches per month. Narrow your keyword list if you want to fetch more often.
+
+## Dashboard
+
+The local dashboard lives under `dashboard/` and is served by a small Python HTTP server:
+
+```bash
+python scripts/dashboard.py        # regenerates data, starts server, opens browser
+python scripts/dashboard.py --no-browser  # headless mode
+python scripts/dashboard.py --port 9000   # custom port
+```
+
+Pages:
+- `dashboard.html` — stats, weekly activity, goal circles
+- `jobs.html` — all fetched jobs with filters, apply/ignore/referral buttons, and matched connections per role
+- `companies.html` — company-level view
+
+State is persisted to `data/tracking.json` (gitignored). The dashboard talks to the local server's `/api/*` endpoints while it's running and falls back to an embedded `dashboard/data.js` file otherwise.
+
+## Upgrading from a pre-dashboard clone
+
+If you have existing `data/outreach-history.json` from an older version:
+
+```bash
+python scripts/migrate_outreach_to_tracking.py
+```
+
+This merges legacy entries into the new `data/tracking.json` schema non-destructively.
 
 ## License
 

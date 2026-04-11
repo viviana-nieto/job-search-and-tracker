@@ -2,7 +2,7 @@
 Job Fetcher - JSearch via RapidAPI
 
 Searches across LinkedIn, Indeed, Glassdoor, and ZipRecruiter.
-Free tier: 500 requests/month.
+Free tier: 200 requests/month.
 
 Setup:
   Create free RapidAPI account, subscribe to JSearch, set RAPIDAPI_KEY
@@ -284,7 +284,7 @@ def main():
     print(f"Max jobs per keyword: {args.max_jobs}")
 
     requests_estimate = len(args.keywords) * len(locations)
-    print(f"Estimated requests: {requests_estimate} (of 500/month free)")
+    print(f"Estimated requests: {requests_estimate} (of 200/month free)")
 
     print("=" * 50)
 
@@ -296,6 +296,25 @@ def main():
         print(f"\nTotal unique jobs: {len(normalized)}")
     else:
         print("\nNo jobs found. Check your API key and search parameters.")
+        return
+
+    # Chain: refresh connection matches if the user has provided connections.
+    connections_file = SCRIPT_DIR.parent / "data" / "connections.csv"
+    if connections_file.exists():
+        print("\nRefreshing connection matches...")
+        try:
+            from match_connections import match_all
+            match_all()
+        except Exception as e:
+            print(f"  (warning: connection matching failed: {e})")
+
+    # Regenerate dashboard data.js so new jobs appear immediately
+    try:
+        from generate_data_js import generate
+        jobs_count, apps_count = generate()
+        print(f"\nDashboard updated: {jobs_count} jobs, {apps_count} applications")
+    except Exception as e:
+        print(f"  (warning: dashboard data regeneration failed: {e})")
 
 
 if __name__ == "__main__":

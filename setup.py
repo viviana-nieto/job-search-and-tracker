@@ -105,6 +105,60 @@ def load_json(filepath):
 # Section: Personal Info
 # ---------------------------------------------------------------------------
 
+RESUME_SUFFIXES = {".pdf", ".md", ".markdown", ".docx"}
+
+
+def _collect_resume_path():
+    """Prompt for a resume with existence + format validation and an optional copy-into-project.
+
+    Returns the final path string (possibly empty if the user insists on skipping).
+    """
+    while True:
+        path_str = ask(
+            "Path to your resume (PDF, Markdown, or DOCX -- press Enter to skip)",
+            required=False,
+        ).strip()
+
+        if not path_str:
+            print("  Skipping a resume means cover-letter and resume-tailoring")
+            print("  commands will have very little to work with.")
+            if ask_yes_no("  Skip anyway?", default="n"):
+                return ""
+            continue
+
+        src = Path(path_str).expanduser().resolve()
+        if not src.exists():
+            print(f"  File not found: {src}")
+            if not ask_yes_no("  Try a different path?", default="y"):
+                return ""
+            continue
+
+        suffix = src.suffix.lower()
+        if suffix not in RESUME_SUFFIXES:
+            print(f"  Unsupported format: {suffix or '(no extension)'}")
+            print(f"  Supported: {', '.join(sorted(RESUME_SUFFIXES))}")
+            if not ask_yes_no("  Try a different path?", default="y"):
+                return ""
+            continue
+
+        # Valid file — offer to copy into the project so the config is portable.
+        dest = PROJECT_DIR / "data" / f"resume{suffix}"
+        if ask_yes_no(
+            f"  Copy {src.name} into data/resume{suffix} (gitignored, portable)?",
+            default="y",
+        ):
+            try:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with open(src, "rb") as fsrc, open(dest, "wb") as fdst:
+                    fdst.write(fsrc.read())
+                print(f"  Copied -> {dest}")
+                return str(dest)
+            except OSError as e:
+                print(f"  Copy failed: {e}. Using original path.")
+                return str(src)
+        return str(src)
+
+
 def collect_personal_info():
     """Collect name, title, contact info."""
     heading("1. Personal Information")
@@ -117,7 +171,12 @@ def collect_personal_info():
     website = ask("Website or LinkedIn URL", required=False)
     location = ask("Location (e.g. 'San Francisco Bay Area')", default="San Francisco Bay Area")
 
-    resume_path = ask("Path to your resume (PDF or markdown)", required=False)
+    subheading("Resume")
+    print("  Your resume powers cover letter and resume tailoring for each")
+    print("  job. The file path is stored in your profile; the file itself")
+    print("  stays local and is gitignored.")
+    print()
+    resume_path = _collect_resume_path()
 
     # Languages
     print("\n  Which languages do you want to generate outreach in?")
@@ -707,6 +766,287 @@ def generate_skill_file(profile, writing_style=None, talking_points=None):
 
 
 # ---------------------------------------------------------------------------
+# Section: LinkedIn connections import
+# ---------------------------------------------------------------------------
+
+LINKEDIN_EXPORT_URL = "https://www.linkedin.com/mypreferences/d/download-my-data"
+RAPIDAPI_JSEARCH_URL = "https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch"
+
+
+def collect_connections():
+    """Import the user's LinkedIn connections CSV into data/connections.csv.
+
+    Returns True if a CSV was imported, False if skipped.
+    """
+    heading("Import LinkedIn Connections")
+    print("  The dashboard can highlight jobs where you already have a")
+    print("  connection at the company. For that, you need to export your")
+    print("  LinkedIn connections and point us at the CSV.")
+    print()
+    print("  This step is OPTIONAL — you can skip it now and import later with:")
+    print("    python setup.py --connections")
+    print()
+
+    dest = PROJECT_DIR / "data" / "connections.csv"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    already = ask_yes_no("Have you already exported your LinkedIn connections?", default="n")
+    if not already:
+        print()
+        print("  How to export (takes a few minutes — LinkedIn emails you the file):")
+        print(f"    1. Open {LINKEDIN_EXPORT_URL}")
+        print("    2. Select 'Connections' under 'Get a copy of your data'")
+        print("    3. Click 'Request archive' — LinkedIn will email it to you")
+        print("    4. Download and extract the archive")
+        print("    5. Note the path to Connections.csv inside it")
+        print()
+        if not ask_yes_no("Continue once you have the file?", default="y"):
+            print("  Skipping. Re-run with: python setup.py --connections")
+            return False
+
+    while True:
+        path_str = ask(
+            "Path to your Connections.csv",
+            default=str(Path.home() / "Downloads" / "Connections.csv"),
+            required=False,
+        )
+        if not path_str:
+            print("  Skipping. Re-run with: python setup.py --connections")
+            return False
+        src = Path(path_str).expanduser().resolve()
+        if not src.exists():
+            print(f"  File not found: {src}")
+            if not ask_yes_no("Try a different path?", default="y"):
+                print("  Skipping. Re-run with: python setup.py --connections")
+                return False
+            continue
+        try:
+            with open(src, "rb") as fsrc, open(dest, "wb") as fdst:
+                fdst.write(fsrc.read())
+        except OSError as e:
+            print(f"  Could not copy: {e}")
+            return False
+
+        # Count rows for confirmation
+        count = 0
+        try:
+            import csv as _csv
+            with open(dest, newline="", encoding="utf-8") as f:
+                first = f.readline().lower()
+                if "first name" not in first:
+                    for _ in range(2):
+                        f.readline()
+                reader = _csv.DictReader(f)
+                count = sum(1 for row in reader if (row.get("First Name") or "").strip())
+        except Exception:
+            pass
+
+        print(f"  Copied {count} connections → {dest}")
+        return True
+
+
+# ---------------------------------------------------------------------------
+# Section: RapidAPI key (JSearch)
+# ---------------------------------------------------------------------------
+
+def _shell_rc_path():
+    """Return a Path for the user's shell rc file, or None if ambiguous."""
+    shell = os.environ.get("SHELL", "")
+    home = Path.home()
+    if "zsh" in shell:
+        return home / ".zshrc"
+    if "bash" in shell:
+        return home / ".bashrc"
+    return None
+
+
+def _persist_api_key(key):
+    """Append `export RAPIDAPI_KEY=...` to the shell rc. Dedupe if present."""
+    rc = _shell_rc_path()
+    if rc is None:
+        print()
+        choice = ask(
+            "Ambiguous shell — append to ~/.zshrc or ~/.bashrc? [zshrc/bashrc]",
+            default="zshrc",
+        ).strip().lower()
+        rc = Path.home() / (".bashrc" if choice.startswith("b") else ".zshrc")
+
+    line = f'export RAPIDAPI_KEY="{key}"'
+
+    # Check for existing line
+    existing_found = False
+    if rc.exists():
+        try:
+            with open(rc) as f:
+                content = f.read()
+            for ln in content.splitlines():
+                if ln.strip().startswith("export RAPIDAPI_KEY"):
+                    existing_found = True
+                    break
+        except OSError:
+            content = ""
+    else:
+        content = ""
+
+    if existing_found:
+        if not ask_yes_no(f"  RAPIDAPI_KEY already present in {rc} — replace it?", default="y"):
+            print(f"  Left existing line in place. Current shell session uses the new key.")
+            return
+        new_lines = []
+        for ln in content.splitlines():
+            if ln.strip().startswith("export RAPIDAPI_KEY"):
+                new_lines.append(line)
+            else:
+                new_lines.append(ln)
+        try:
+            with open(rc, "w") as f:
+                f.write("\n".join(new_lines) + "\n")
+            print(f"  Replaced RAPIDAPI_KEY in {rc}")
+        except OSError as e:
+            print(f"  Could not write {rc}: {e}")
+        return
+
+    try:
+        with open(rc, "a") as f:
+            if content and not content.endswith("\n"):
+                f.write("\n")
+            f.write(f"\n# Job Search Agent (JSearch)\n{line}\n")
+        print(f"  Appended to {rc}")
+        print(f"  Open a new terminal or run: source {rc}")
+    except OSError as e:
+        print(f"  Could not write {rc}: {e}")
+
+
+def collect_api_key():
+    """Guided RapidAPI key setup. Returns the key (set in os.environ) or None."""
+    heading("RapidAPI Key (JSearch)")
+
+    # Detect pre-set key
+    existing = os.environ.get("RAPIDAPI_KEY", "").strip()
+    if existing:
+        print(f"  Detected existing RAPIDAPI_KEY in environment — using it.")
+        return existing
+
+    print("  Job fetching uses JSearch via RapidAPI (free tier: 200 requests/month).")
+    print("  This step is OPTIONAL — you can skip and add the key later with:")
+    print("    python setup.py --api-key")
+    print()
+
+    have_key = ask_yes_no("Do you already have a RapidAPI key?", default="n")
+
+    if not have_key:
+        print()
+        print("  No problem — here's how to get one (takes about 2 minutes):")
+        print()
+        print("    1. Open https://rapidapi.com/ and sign up (Google/GitHub works).")
+        input("       Press Enter when done... ")
+        print()
+        print("    2. Go to the JSearch API page:")
+        print(f"       {RAPIDAPI_JSEARCH_URL}")
+        input("       Press Enter when you're there... ")
+        print()
+        print("    3. Click 'Subscribe to Test' and choose the Basic (Free) plan.")
+        print("       (No credit card required.)")
+        input("       Press Enter when subscribed... ")
+        print()
+        print("    4. On the API playground, find the 'X-RapidAPI-Key' header")
+        print("       field and copy the value.")
+        input("       Press Enter when you have it copied... ")
+        print()
+
+    key = ask("Paste your RapidAPI key (or leave blank to skip)", required=False).strip()
+    if not key:
+        print("  Skipping. Re-run with: python setup.py --api-key")
+        print(f"  Or set manually: export RAPIDAPI_KEY=your_key_here")
+        return None
+
+    os.environ["RAPIDAPI_KEY"] = key
+
+    print()
+    if ask_yes_no("Append this to your shell profile so it's set in new terminals?", default="y"):
+        _persist_api_key(key)
+    else:
+        print("  OK — key is set for this session only.")
+        print(f"  To persist later: echo 'export RAPIDAPI_KEY=\"{key}\"' >> ~/.zshrc")
+
+    return key
+
+
+# ---------------------------------------------------------------------------
+# Section: First fetch + launch dashboard
+# ---------------------------------------------------------------------------
+
+def run_first_fetch_and_launch(search_criteria=None):
+    """Offer an initial job fetch and then open the dashboard.
+
+    Reads keywords/locations from search_criteria (or the saved config file).
+    """
+    heading("Fetch Jobs & Open Dashboard")
+
+    api_key = os.environ.get("RAPIDAPI_KEY", "").strip()
+
+    if search_criteria is None:
+        sc_path = CONFIG_DIR / "search-criteria.json"
+        if sc_path.exists():
+            search_criteria = load_json(sc_path)
+        else:
+            search_criteria = {}
+
+    keywords = (
+        search_criteria.get("search_queries", {}).get("high_priority")
+        or search_criteria.get("roles", {}).get("target")
+        or []
+    )
+    locations = search_criteria.get("locations", {}).get("preferred") or []
+
+    if api_key and keywords:
+        print(f"  Keywords: {', '.join(keywords[:5])}{'...' if len(keywords) > 5 else ''}")
+        print(f"  Locations: {', '.join(locations) if locations else '(defaults)'}")
+        estimate = len(keywords) * max(len(locations), 1)
+        print(f"  Estimated API requests: ~{estimate} (of 200/month free)")
+        print()
+        if ask_yes_no("Fetch jobs now?", default="y"):
+            print()
+            import subprocess
+            fetch_cmd = [sys.executable, str(PROJECT_DIR / "scripts" / "fetch_jobs.py")]
+            if keywords:
+                fetch_cmd += ["--keywords", *keywords]
+            if locations:
+                fetch_cmd += ["--locations", *locations]
+            try:
+                subprocess.run(fetch_cmd, check=False)
+            except Exception as e:
+                print(f"  Fetch failed: {e}")
+        else:
+            print("  Skipping fetch. Run later with: python scripts/fetch_jobs.py")
+    elif not api_key:
+        print("  No RAPIDAPI_KEY set — skipping job fetch.")
+        print("  Add a key later with: python setup.py --api-key")
+    elif not keywords:
+        print("  No search keywords configured — skipping fetch.")
+        print("  Configure later with: python setup.py --keywords")
+
+    # Regenerate dashboard data.js regardless, so any existing data is picked up
+    try:
+        sys.path.insert(0, str(PROJECT_DIR / "scripts"))
+        from generate_data_js import generate
+        generate()
+    except Exception as e:
+        print(f"  (warning: dashboard data.js regeneration failed: {e})")
+
+    print()
+    if ask_yes_no("Open the dashboard now?", default="y"):
+        print()
+        print("  Starting local server at http://localhost:8777/dashboard.html")
+        print("  Press Ctrl+C to stop.")
+        print()
+        import subprocess
+        subprocess.run([sys.executable, str(PROJECT_DIR / "scripts" / "dashboard.py")])
+    else:
+        print("  Launch later with: python scripts/dashboard.py")
+
+
+# ---------------------------------------------------------------------------
 # Main: Interactive Setup
 # ---------------------------------------------------------------------------
 
@@ -720,16 +1060,20 @@ def run_interactive_setup():
     print("  Welcome! This script will configure the job search agent")
     print("  for your personal use. It takes about 5-10 minutes.")
     print()
-    print("  We'll collect:")
+    print("  We'll walk through:")
     print("    1. Personal information")
     print("    2. Career context")
     print("    3. Credibility snippets (for outreach messages)")
-    print("    4. Job search preferences")
+    print("    4. Job search preferences (roles, keywords, locations)")
     print("    5. Writing style preferences")
     print("    6. Industry-specific talking points")
+    print("    7. Import LinkedIn connections (optional)")
+    print("    8. RapidAPI key for job fetching (optional)")
+    print("    9. First fetch + open dashboard")
     print()
-    print("  Then we'll generate config files, CLAUDE.md, and a")
-    print("  Claude Code skill file so everything works together.")
+    print("  We'll generate config files, CLAUDE.md, a Claude Code skill")
+    print("  file, and — if you provide a key — fetch your first batch of")
+    print("  jobs and open the dashboard at the end.")
     print()
 
     if not ask_yes_no("Ready to begin?"):
@@ -822,24 +1166,40 @@ def run_interactive_setup():
     if not sizes_file.exists():
         write_json(sizes_file, {"large": [], "startup": []})
 
-    # ---- Done ----
-    heading("Setup Complete!")
-    print("  Generated files:")
+    # Ensure tracking.json exists from template so the dashboard has state
+    tracking_file = data_dir / "tracking.json"
+    tracking_template = data_dir / "tracking-template.json"
+    if not tracking_file.exists() and tracking_template.exists():
+        with open(tracking_template) as src, open(tracking_file, "w") as dst:
+            dst.write(src.read())
+
+    # ---- 7. Connections ----
+    collect_connections()
+
+    # ---- 8. API Key ----
+    collect_api_key()
+
+    # ---- Config file summary ----
+    heading("Config Files Generated")
     print(f"    - {CONFIG_DIR / 'profile.json'}")
     print(f"    - {CONFIG_DIR / 'search-criteria.json'}")
     print(f"    - {CONFIG_DIR / 'talking-points.json'}")
     print(f"    - {CONFIG_DIR / 'writing-style.json'}")
     print(f"    - {CLAUDE_MD_PATH}")
     print(f"    - {SKILL_FILE}")
+
+    # ---- 9. First fetch + launch dashboard ----
+    run_first_fetch_and_launch(search_criteria=search_criteria)
+
+    # ---- Done ----
+    heading("Setup Complete!")
+    print("  Daily commands:")
+    print(f"    python scripts/dashboard.py        # open the dashboard")
+    print(f"    python scripts/fetch_jobs.py       # fetch more jobs")
+    print(f"    python setup.py --connections      # re-import LinkedIn connections")
+    print(f"    python setup.py --api-key          # update your RapidAPI key")
     print()
-    print("  Next steps:")
-    print(f"    1. Review your config files in {CONFIG_DIR}")
-    print(f"    2. Set up job fetching API (free):")
-    print(f"       - Go to https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch")
-    print(f"       - Subscribe to the free Basic plan (500 requests/month)")
-    print(f"       - Copy your API key and run: export RAPIDAPI_KEY=your_key")
-    print(f"    3. Try: /job-search-agent fetch jobs")
-    print(f"    4. See README.md for full API setup guide")
+    print("  Or in Claude Code: /job-search-agent fetch jobs")
     print()
 
 
@@ -899,8 +1259,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python setup.py                  Interactive setup (first time)
+  python setup.py                  Full interactive setup (first time)
   python setup.py --from-config    Regenerate CLAUDE.md from existing config
+  python setup.py --connections    Import (or re-import) LinkedIn connections
+  python setup.py --keywords       Update search keywords and locations
+  python setup.py --api-key        Set or update your RapidAPI key
+  python setup.py --fetch          Fetch jobs and open the dashboard
         """,
     )
     parser.add_argument(
@@ -908,11 +1272,42 @@ Examples:
         action="store_true",
         help="Regenerate CLAUDE.md and skill file from existing config files",
     )
+    parser.add_argument(
+        "--connections",
+        action="store_true",
+        help="Import or re-import LinkedIn connections CSV only",
+    )
+    parser.add_argument(
+        "--keywords",
+        action="store_true",
+        help="Update search keywords and locations only",
+    )
+    parser.add_argument(
+        "--api-key",
+        action="store_true",
+        help="Set or update your RapidAPI key only",
+    )
+    parser.add_argument(
+        "--fetch",
+        action="store_true",
+        help="Fetch jobs using saved config and open the dashboard",
+    )
 
     args = parser.parse_args()
 
     if args.from_config:
         run_from_config()
+    elif args.connections:
+        collect_connections()
+    elif args.api_key:
+        collect_api_key()
+    elif args.keywords:
+        search_criteria = collect_search_preferences()
+        write_json(CONFIG_DIR / "search-criteria.json", search_criteria)
+        print()
+        print(f"  Updated: {CONFIG_DIR / 'search-criteria.json'}")
+    elif args.fetch:
+        run_first_fetch_and_launch()
     else:
         run_interactive_setup()
 

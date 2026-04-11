@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>Job Application Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #333; padding: 72px 24px 24px; max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: #666; margin-bottom: 24px; font-size: 14px; }
+  .topnav { display: flex; gap: 0; background: #1e293b; padding: 0 24px; position: fixed; top: 0; left: 0; right: 0; z-index: 200; justify-content: center; }
+  .topnav a { font-size: 14px; font-weight: 500; color: #94a3b8; text-decoration: none; padding: 14px 20px; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; }
+  .topnav a:hover { color: #e2e8f0; border-bottom-color: #475569; }
+  .topnav a.active { color: #ffffff; border-bottom-color: #3b82f6; }
+  .stats { display: flex; gap: 16px; margin-bottom: 24px; }
+  .stat { background: white; border-radius: 8px; padding: 16px; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .stat-number { font-size: 28px; font-weight: 700; color: #2563eb; }
+  .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+  .stat-green .stat-number { color: #16a34a; }
+  .stat-purple .stat-number { color: #7c3aed; }
+  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; }
+  th { background: #f1f5f9; text-align: left; padding: 12px 14px; font-size: 12px; font-weight: 600; color: #475569; white-space: nowrap; }
+  td { padding: 12px 14px; font-size: 13px; border-top: 1px solid #f1f5f9; vertical-align: top; }
+  tr:hover { background: #f8fafc; }
+  .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-applied { background: #d1fae5; color: #047857; }
+  .badge-sent { background: #ede9fe; color: #7c3aed; }
+  .badge-pending { background: #f1f5f9; color: #64748b; }
+  .badge-replied { background: #dbeafe; color: #2563eb; }
+  .badge-interview { background: #fef3c7; color: #b45309; }
+  .msg-preview { font-size: 12px; color: #555; max-width: 250px; line-height: 1.4; cursor: pointer; }
+  .msg-preview:hover { color: #2563eb; }
+  .msg-full { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+  .msg-full.visible { display: flex; }
+  .msg-modal { background: white; border-radius: 8px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  .msg-modal h3 { margin-bottom: 12px; }
+  .msg-modal pre { white-space: pre-wrap; font-family: inherit; font-size: 13px; line-height: 1.5; background: #f8fafc; padding: 12px; border-radius: 6px; }
+  .msg-modal button { margin-top: 12px; background: #2563eb; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
+  .link-icon { color: #2563eb; text-decoration: none; font-size: 13px; }
+  .link-icon:hover { text-decoration: underline; }
+  .status-select { padding: 4px 8px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 12px; background: white; cursor: pointer; font-weight: 500; }
+  .status-select.status-pending { border-color: #d1d5db; color: #64748b; }
+  .status-select.status-accepted { border-color: #16a34a; color: #047857; background: #f0fdf4; }
+  .status-select.status-replied { border-color: #2563eb; color: #1d4ed8; background: #eff6ff; }
+  .status-select.status-interview { border-color: #b45309; color: #92400e; background: #fef3c7; }
+  .status-select.status-declined { border-color: #dc2626; color: #b91c1c; background: #fef2f2; }
+  .status-select.status-no_response { border-color: #94a3b8; color: #64748b; background: #f8fafc; }
+  .status-select.status-applied { border-color: #16a34a; color: #047857; background: #d1fae5; }
+  .status-select.status-screening { border-color: #7c3aed; color: #6d28d9; background: #ede9fe; }
+  .status-select.status-rejected { border-color: #dc2626; color: #b91c1c; background: #fef2f2; }
+  .status-select.status-offer { border-color: #16a34a; color: #047857; background: #bbf7d0; }
+  .status-select.status-not_available { border-color: #94a3b8; color: #64748b; background: #f1f5f9; }
+  .notes-area { max-width: 250px; }
+  .notes-list { list-style: none; margin: 0; padding: 0; }
+  .notes-list li { font-size: 11px; padding: 4px 0; border-bottom: 1px solid #f1f5f9; line-height: 1.4; }
+  .notes-list li:last-child { border-bottom: none; }
+  .note-date { color: #94a3b8; font-size: 10px; display: block; }
+  .note-text { color: #333; }
+  .note-text-editable { color: #333; cursor: pointer; border-bottom: 1px dashed transparent; }
+  .note-text-editable:hover { border-bottom-color: #d1d5db; }
+  .note-edit-input { width: 100%; padding: 2px 4px; border: 1px solid #2563eb; border-radius: 3px; font-size: 11px; font-family: inherit; }
+  .note-actions { display: inline-flex; gap: 4px; margin-left: 4px; }
+  .note-action-btn { background: none; border: none; font-size: 10px; cursor: pointer; padding: 0 2px; }
+  .note-action-btn.edit { color: #2563eb; }
+  .note-action-btn.delete { color: #dc2626; }
+  .note-add { display: flex; gap: 4px; margin-top: 6px; }
+  .note-input { flex: 1; padding: 4px 8px; border: 1px dashed #d1d5db; border-radius: 4px; font-size: 12px; font-family: inherit; background: #f8fafc; }
+  .note-input:focus { border-color: #2563eb; outline: none; background: white; }
+  .note-btn { background: #2563eb; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+  .note-btn:hover { background: #1d4ed8; }
+  .notes-toggle { font-size: 11px; color: #2563eb; cursor: pointer; }
+  .notes-expand { display: none; }
+  .notes-expand.visible { display: block; }
+  .empty-state { text-align: center; padding: 60px 24px; color: #94a3b8; }
+  .empty-state h2 { font-size: 18px; margin-bottom: 8px; color: #64748b; }
+  .section-title { font-size: 18px; font-weight: 600; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; }
+  .timeline { margin-top: 24px; }
+  .timeline-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+  .timeline-date { font-size: 12px; color: #94a3b8; min-width: 140px; }
+  .timeline-content { font-size: 13px; }
+  .refresh-btn { background: #f1f5f9; border: 1px solid #d1d5db; padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .refresh-btn:hover { background: #e2e8f0; }
+  .stats-row { display: flex; gap: 16px; margin-bottom: 16px; }
+  .stat-sub .stat-number { font-size: 22px; }
+  .stat-sub .stat-label { font-size: 11px; }
+  .week-section { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; }
+  .week-toggle { display: flex; justify-content: center; gap: 4px; margin-bottom: 14px; background: #f1f5f9; border-radius: 8px; padding: 3px; }
+  .week-toggle-btn { padding: 6px 16px; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; background: transparent; color: #64748b; transition: all 0.15s; }
+  .week-toggle-btn:hover { color: #334155; }
+  .week-toggle-btn.active-apps { background: #16a34a; color: white; }
+  .week-toggle-btn.active-outreach { background: #7c3aed; color: white; }
+  .week-toggle-btn.active-both { background: #2563eb; color: white; }
+  .week-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px; }
+  .week-nav-btn { background: none; border: 1px solid #e5e7eb; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 16px; color: #475569; display: flex; align-items: center; justify-content: center; }
+  .week-nav-btn:hover { background: #f1f5f9; }
+  .week-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .week-nav-label { font-size: 14px; font-weight: 600; color: #334155; text-align: center; min-width: 220px; }
+  .week-nav-sub { font-size: 11px; font-weight: 400; color: #94a3b8; }
+  .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 16px; }
+  .week-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 8px; }
+  .week-cell-today { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .week-cell-future { opacity: 0.35; }
+  .week-day { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+  .week-date { font-size: 12px; color: #94a3b8; }
+  .week-progress { position: relative; width: 44px; height: 44px; }
+  .week-progress svg { transform: rotate(-90deg); }
+  .week-progress-bg { fill: none; stroke: #e5e7eb; stroke-width: 3; }
+  .week-progress-fill { fill: none; stroke: #16a34a; stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.3s; }
+  .week-progress-full .week-progress-fill { stroke: #16a34a; }
+  .week-progress-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #64748b; }
+  .week-progress-num.has-apps { color: #16a34a; }
+  .week-progress-num.is-full { color: #047857; }
+  .week-total { display: flex; justify-content: center; gap: 16px; padding-top: 12px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #475569; }
+  .week-target { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; }
+  .week-target input { width: 44px; padding: 3px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center; }
+  .week-target input:focus { border-color: #2563eb; outline: none; }
+  .perf-section { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; }
+  .perf-section h3 { font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 12px; }
+  .perf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .perf-card { background: #f8fafc; border-radius: 6px; padding: 14px; }
+  .perf-card h4 { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 8px; }
+  .perf-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 12px; }
+  .perf-label { color: #333; }
+  .perf-value { display: flex; align-items: center; gap: 6px; }
+  .perf-bar-bg { width: 60px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+  .perf-bar-fill { height: 100%; border-radius: 3px; background: #2563eb; }
+  .perf-pct { font-size: 11px; color: #64748b; min-width: 35px; text-align: right; }
+  @media (max-width: 768px) {
+    body { padding: 60px 12px 12px; }
+    h1 { font-size: 20px; }
+    .stats { flex-wrap: wrap; gap: 8px; }
+    .stat { min-width: calc(50% - 4px); flex: none; padding: 12px; }
+    .stat-number { font-size: 22px; }
+    .section-title { font-size: 16px; margin: 20px 0 10px; }
+    table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .week-grid { gap: 3px; }
+    .week-cell { padding: 6px 2px; }
+    .week-day { font-size: 10px; }
+    .week-date { font-size: 10px; }
+    .week-progress { width: 36px; height: 36px; }
+    .week-progress-num { font-size: 12px; }
+    .week-nav-label { min-width: 160px; font-size: 12px; }
+    .week-total { flex-wrap: wrap; gap: 8px; font-size: 12px; }
+    .week-toggle-btn { padding: 5px 10px; font-size: 11px; }
+    .timeline-item { flex-wrap: wrap; gap: 6px; }
+    .timeline-date { min-width: auto; }
+    .notes-area { max-width: 150px; }
+    .msg-modal { padding: 16px; }
+  }
+  @media (max-width: 480px) {
+    body { padding: 56px 8px 8px; }
+    .stat { min-width: 100%; }
+    .week-progress { width: 30px; height: 30px; }
+    .week-progress-num { font-size: 10px; }
+    .week-nav-label { min-width: 120px; font-size: 11px; }
+    .topnav a { padding: 10px 14px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<script src="data.js"></script>
+
+<div class="topnav">
+  <a href="jobs.html">All Jobs</a>
+  <a href="dashboard.html" class="active">Dashboard</a>
+  <a href="companies.html">Pick Companies</a>
+</div>
+
+<div style="display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <h1>Application Dashboard</h1>
+    <p class="subtitle">Track your job applications, connection requests, and outreach</p>
+  </div>
+  <button class="refresh-btn" onclick="loadData()">Refresh</button>
+</div>
+
+<div class="stats">
+  <div class="stat stat-green"><div class="stat-number" id="stat-applied">0</div><div class="stat-label">Jobs Applied</div></div>
+  <div class="stat stat-purple"><div class="stat-number" id="stat-sent">0</div><div class="stat-label">Requests Sent</div></div>
+  <div class="stat"><div class="stat-number" id="stat-response-rate">--</div><div class="stat-label">Response Rate</div></div>
+  <div class="stat"><div class="stat-number" id="stat-pending">0</div><div class="stat-label">Awaiting Response</div></div>
+</div>
+
+<div id="daily-chart"></div>
+
+<h2 class="section-title">Applications</h2>
+<div id="applications-table"></div>
+
+<h2 class="section-title">Connection Requests Sent</h2>
+<div id="sent-table"></div>
+
+<h2 class="section-title">Activity Timeline</h2>
+<div id="timeline" class="timeline"></div>
+
+<!-- Message modal -->
+<div class="msg-full" id="msg-modal" onclick="if(event.target===this)closeModal()">
+  <div class="msg-modal">
+    <h3 id="modal-title">Message</h3>
+    <pre id="modal-body"></pre>
+    <button onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+  // Dual-mode: localhost uses local_server.py; everywhere else uses deployed /api
+  const IS_LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
+  const API_BASE = IS_LOCAL ? 'http://localhost:8777/api' : '/api';
+  let trackingData = null;
+  let serverAvailable = false;
+
+  async function apiPost(path, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (!IS_LOCAL) {
+      let key = sessionStorage.getItem('js_api_key');
+      if (!key) {
+        key = prompt('Enter API key to enable edits (cached per session):');
+        if (!key) return null;
+        sessionStorage.setItem('js_api_key', key.trim());
+        key = key.trim();
+      }
+      headers['x-api-key'] = key;
+    }
+    try {
+      const r = await fetch(`${API_BASE}${path}`, {
+        method: 'POST', headers, body: JSON.stringify(body),
+      });
+      if (r.status === 401) {
+        sessionStorage.removeItem('js_api_key');
+        alert('API key rejected. Refresh and try again.');
+        return null;
+      }
+      return r;
+    } catch (e) {
+      console.warn('apiPost failed:', e);
+      return null;
+    }
+  }
+
+  async function loadData() {
+    // Embedded data.js is the local-mode fallback
+    trackingData = window.TRACKING_DATA || { applications: [], unlinked_outreach: [], stats: {} };
+
+    try {
+      const resp = await fetch(`${API_BASE}/tracking`);
+      if (resp.ok) { trackingData = await resp.json(); serverAvailable = true; }
+    } catch { serverAvailable = false; }
+
+    renderStats();
+    renderChart();
+    renderApplications();
+    renderOutreach();
+    renderTimeline();
+  }
+
+  function renderStats() {
+    const apps = trackingData.applications || [];
+    const allOutreach = [];
+    apps.forEach(a => allOutreach.push(...(a.outreach || [])));
+    (trackingData.unlinked_outreach || []).forEach(o => allOutreach.push(o));
+
+    const applied = apps.filter(a => a.dates?.applied).length;
+    const sent = allOutreach.length;
+    const pending = allOutreach.filter(o => o.outcome === 'pending').length;
+    const positive = allOutreach.filter(o => ['accepted','replied','interview'].includes(o.outcome)).length;
+    const rate = sent > 0 ? Math.round(positive / sent * 100) + '%' : '--';
+
+    document.getElementById('stat-applied').textContent = applied;
+    document.getElementById('stat-sent').textContent = sent;
+    document.getElementById('stat-response-rate').textContent = rate;
+    document.getElementById('stat-pending').textContent = pending;
+  }
+
+  let weekOffset = 0;
+  let weekMode = 'applications'; // 'applications' | 'outreach' | 'both'
+
+  const MODE_CONFIG = {
+    applications: { color: '#16a34a', colorFull: '#047857', label: 'applications', targetKey: 'daily_target', defaultTarget: 10 },
+    outreach:     { color: '#7c3aed', colorFull: '#5b21b6', label: 'outreach',     targetKey: 'daily_outreach_target', defaultTarget: 10 },
+    both:         { color: '#2563eb', colorFull: '#1d4ed8', label: 'total activities', targetKey: 'daily_both_target', defaultTarget: 15 },
+  };
+
+  function getMonday(offset) {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - diff + (offset * 7));
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  }
+
+  function fmtDate(d) { return d.toISOString().slice(0, 10); }
+
+  function prevWeek() { if (weekOffset > -2) { weekOffset--; renderChart(); } }
+  function nextWeek() { if (weekOffset < 0) { weekOffset++; renderChart(); } }
+  function setWeekMode(mode) { weekMode = mode; renderChart(); }
+
+  function getDailyTarget() {
+    const cfg = MODE_CONFIG[weekMode];
+    return trackingData.metadata?.[cfg.targetKey] || localStorage.getItem(cfg.targetKey) || cfg.defaultTarget;
+  }
+
+  function setDailyTarget(val) {
+    const cfg = MODE_CONFIG[weekMode];
+    val = Math.max(1, Math.min(50, parseInt(val) || cfg.defaultTarget));
+    if (!trackingData.metadata) trackingData.metadata = {};
+    trackingData.metadata[cfg.targetKey] = val;
+    localStorage.setItem(cfg.targetKey, val);
+    if (serverAvailable) {
+      apiPost('/tracking', trackingData);
+    }
+    renderChart();
+  }
+
+  function progressCircle(count, target, isFuture, color, colorFull) {
+    const size = 44;
+    const strokeWidth = 3;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const progress = isFuture ? 0 : Math.min(count / target, 1);
+    const offset = circumference * (1 - progress);
+    const isFull = count >= target && !isFuture;
+    const strokeColor = isFull ? colorFull : color;
+    const textColor = isFull ? colorFull : count > 0 ? color : '#64748b';
+
+    return `<div class="week-progress">
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <circle class="week-progress-bg" cx="${size/2}" cy="${size/2}" r="${radius}"/>
+        <circle class="week-progress-fill" cx="${size/2}" cy="${size/2}" r="${radius}"
+          style="stroke:${strokeColor}" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+      </svg>
+      <div class="week-progress-num" style="color:${textColor}">${isFuture ? '' : count || '–'}</div>
+    </div>`;
+  }
+
+  function renderChart() {
+    const container = document.getElementById('daily-chart');
+    const apps = trackingData.applications || [];
+    const today = fmtDate(new Date());
+    const cfg = MODE_CONFIG[weekMode];
+    const target = parseInt(getDailyTarget());
+
+    // Count per date based on mode
+    const countsByDate = {};
+    apps.forEach(a => {
+      if (weekMode !== 'outreach' && a.dates?.applied) {
+        countsByDate[a.dates.applied] = (countsByDate[a.dates.applied] || 0) + 1;
+      }
+      if (weekMode !== 'applications') {
+        (a.outreach || []).forEach(o => {
+          if (o.dates?.sent) {
+            countsByDate[o.dates.sent] = (countsByDate[o.dates.sent] || 0) + 1;
+          }
+        });
+      }
+    });
+    if (weekMode !== 'applications') {
+      (trackingData.unlinked_outreach || []).forEach(o => {
+        if (o.dates?.sent) {
+          countsByDate[o.dates.sent] = (countsByDate[o.dates.sent] || 0) + 1;
+        }
+      });
+    }
+
+    // Build week days
+    const monday = getMonday(weekOffset);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      weekDays.push(d);
+    }
+
+    const fmtRange = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const rangeLabel = `${fmtRange(monday)} – ${fmtRange(sunday)}, ${sunday.getFullYear()}`;
+    const subLabel = weekOffset === 0 ? 'This Week' : weekOffset === -1 ? 'Last Week' : '';
+
+    // Toggle
+    const toggleClass = (m) => `week-toggle-btn${weekMode === m ? ` active-${m === 'applications' ? 'apps' : m}` : ''}`;
+
+    let html = `<div class="week-section">
+      <div class="week-toggle">
+        <button class="${toggleClass('applications')}" onclick="setWeekMode('applications')">Applications</button>
+        <button class="${toggleClass('outreach')}" onclick="setWeekMode('outreach')">Outreach</button>
+        <button class="${toggleClass('both')}" onclick="setWeekMode('both')">Both</button>
+      </div>
+      <div class="week-nav">
+        <button class="week-nav-btn" onclick="prevWeek()" ${weekOffset <= -2 ? 'disabled' : ''}>&#9664;</button>
+        <div class="week-nav-label">${esc(rangeLabel)}${subLabel ? `<br><span class="week-nav-sub">${subLabel}</span>` : ''}</div>
+        <button class="week-nav-btn" onclick="nextWeek()" ${weekOffset >= 0 ? 'disabled' : ''}>&#9654;</button>
+      </div>
+      <div class="week-grid">`;
+
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    let weekTotal = 0;
+
+    weekDays.forEach((d, i) => {
+      const key = fmtDate(d);
+      const count = countsByDate[key] || 0;
+      const isToday = key === today;
+      const isFuture = key > today;
+      if (!isFuture) weekTotal += count;
+
+      let cellClass = 'week-cell';
+      if (isToday) cellClass += ' week-cell-today';
+      if (isFuture) cellClass += ' week-cell-future';
+
+      html += `<div class="${cellClass}">
+        <span class="week-day">${dayNames[i]}</span>
+        <span class="week-date">${d.getDate()}</span>
+        ${progressCircle(count, target, isFuture, cfg.color, cfg.colorFull)}
+      </div>`;
+    });
+
+    const weekTarget = target * 7;
+
+    html += `</div>
+      <div class="week-total">
+        <span>${weekTotal} / ${weekTarget} ${cfg.label} this week</span>
+        <div class="week-target">
+          <span>Daily goal:</span>
+          <input type="number" min="1" max="50" value="${target}" onchange="setDailyTarget(this.value)">
+        </div>
+      </div>
+    </div>`;
+
+    container.innerHTML = html;
+  }
+
+  function renderApplications() {
+    const container = document.getElementById('applications-table');
+    const apps = (trackingData.applications || []).filter(a => a.dates?.applied);
+
+    if (apps.length === 0) {
+      container.innerHTML = '<div class="empty-state"><h2>No applications yet</h2><p>Mark jobs as applied in the All Jobs page</p></div>';
+      return;
+    }
+
+    let html = `<table>
+      <thead><tr>
+        <th>#</th><th>Company</th><th>Role</th><th>Link</th><th>Applied On</th><th>Days</th>
+        <th>Status</th><th>Outreach</th><th>Notes</th>
+      </tr></thead><tbody>`;
+
+    apps.forEach((app, i) => {
+      const outreach = app.outreach || [];
+      const outreachBadges = outreach.length > 0
+        ? outreach.map(o => `<span class="badge badge-sent">${esc(o.name)} <small>(${o.outcome})</small></span>`).join(' ')
+        : '<span class="badge badge-pending">None</span>';
+
+      const appStatus = app.status || 'applied';
+      const notes = app.notes || '';
+
+      html += `<tr>
+        <td>${i + 1}</td>
+        <td><b>${esc(app.company)}</b></td>
+        <td>${esc(app.role)}</td>
+        <td>${app.url ? `<a href="${esc(app.url)}" target="_blank" class="link-icon">View</a>` : '-'}</td>
+        <td title="${app.dates?.applied_at ? esc(new Date(app.dates.applied_at).toLocaleString()) : ''}">${esc(app.dates?.applied || '')}</td>
+        <td style="text-align:center;color:#64748b;">${app.dates?.applied ? Math.floor((Date.now() - new Date(app.dates.applied + 'T00:00:00').getTime()) / 86400000) : '–'}</td>
+        <td>
+          <select class="status-select status-${appStatus}" onchange="updateAppStatus('${esc(app.id)}', this.value, this)">
+            <option value="saved" ${appStatus === 'saved' ? 'selected' : ''}>Saved</option>
+            <option value="applied" ${appStatus === 'applied' ? 'selected' : ''}>Applied</option>
+            <option value="screening" ${appStatus === 'screening' ? 'selected' : ''}>Screening</option>
+            <option value="interview" ${appStatus === 'interview' ? 'selected' : ''}>Interview</option>
+            <option value="offer" ${appStatus === 'offer' ? 'selected' : ''}>Offer</option>
+            <option value="rejected" ${appStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
+            <option value="no_response" ${appStatus === 'no_response' ? 'selected' : ''}>No Response</option>
+            <option value="not_available" ${appStatus === 'not_available' ? 'selected' : ''}>Not Available</option>
+          </select>
+        </td>
+        <td>${outreachBadges}</td>
+        <td>
+          <div class="note-add">
+            <input class="note-input" placeholder="Add note..." value="${esc(notes)}">
+            <button class="note-btn" onclick="saveNote('${esc(app.id)}', this.previousElementSibling)">Save</button>
+          </div>
+        </td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function renderOutreach() {
+    const container = document.getElementById('sent-table');
+    const allOutreach = [];
+
+    (trackingData.applications || []).forEach(app => {
+      (app.outreach || []).forEach(o => {
+        allOutreach.push({ ...o, company: app.company, role: app.role });
+      });
+    });
+
+    if (allOutreach.length === 0) {
+      container.innerHTML = '<div class="empty-state"><h2>No connection requests sent yet</h2><p>Use "Mark Sent" in the All Jobs page</p></div>';
+      return;
+    }
+
+    let html = `<table>
+      <thead><tr>
+        <th>#</th><th>Recipient</th><th>Company</th><th>Type</th>
+        <th>Variant</th><th>Sent On</th><th>Profile</th><th>Message</th><th>Status</th>
+      </tr></thead><tbody>`;
+
+    allOutreach.forEach((o, i) => {
+      const msgPreview = (o.message || '').slice(0, 80) + ((o.message || '').length > 80 ? '...' : '');
+      const outcome = o.outcome || 'pending';
+      const variant = o.variant || '-';
+
+      html += `<tr>
+        <td>${i + 1}</td>
+        <td><b>${esc(o.name || '')}</b><br><small>${esc(o.recipient_role || '')}</small></td>
+        <td>${esc(o.company)}</td>
+        <td>${esc(o.type || '')}</td>
+        <td>${esc(variant)}</td>
+        <td>${esc(o.dates?.sent || '')}</td>
+        <td>${o.linkedin_url ? `<a href="${esc(o.linkedin_url)}" target="_blank" class="link-icon">View</a>` : '-'}</td>
+        <td><span class="msg-preview" onclick="showMessage('${esc(o.name || '')} @ ${esc(o.company)}', \`${esc(o.message || '').replace(/`/g, "'")}\`)">${esc(msgPreview)}</span></td>
+        <td>
+          <select class="status-select status-${outcome}" onchange="updateOutreachStatus('${esc(o.id)}', this.value, this)">
+            <option value="pending" ${outcome === 'pending' ? 'selected' : ''}>Pending</option>
+            <option value="accepted" ${outcome === 'accepted' ? 'selected' : ''}>Accepted</option>
+            <option value="replied" ${outcome === 'replied' ? 'selected' : ''}>Replied</option>
+            <option value="interview" ${outcome === 'interview' ? 'selected' : ''}>Interview</option>
+            <option value="declined" ${outcome === 'declined' ? 'selected' : ''}>Declined</option>
+            <option value="no_response" ${outcome === 'no_response' ? 'selected' : ''}>No Response</option>
+          </select>
+        </td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function renderTimeline() {
+    const container = document.getElementById('timeline');
+    const events = [];
+
+    (trackingData.applications || []).forEach(app => {
+      if (app.dates?.applied) {
+        events.push({ date: app.dates.applied, type: 'applied',
+          text: `Applied to <b>${esc(app.role)}</b> at <b>${esc(app.company)}</b>` });
+      }
+      (app.outreach || []).forEach(o => {
+        if (o.dates?.sent) {
+          events.push({ date: o.dates.sent, type: 'sent',
+            text: `Sent ${esc(o.type || 'message')} to <b>${esc(o.name)}</b> at <b>${esc(app.company)}</b>` });
+        }
+        if (o.dates?.accepted) {
+          events.push({ date: o.dates.accepted, type: 'accepted',
+            text: `<b>${esc(o.name)}</b> at <b>${esc(app.company)}</b> accepted connection` });
+        }
+        if (o.dates?.replied) {
+          events.push({ date: o.dates.replied, type: 'replied',
+            text: `<b>${esc(o.name)}</b> at <b>${esc(app.company)}</b> replied` });
+        }
+      });
+    });
+
+    events.sort((a, b) => b.date.localeCompare(a.date));
+
+    if (events.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>No activity yet</p></div>';
+      return;
+    }
+
+    container.innerHTML = events.map(e => `
+      <div class="timeline-item">
+        <span class="timeline-date">${esc(e.date)}</span>
+        <span class="badge ${
+          e.type === 'applied' ? 'badge-applied' :
+          e.type === 'sent' ? 'badge-sent' :
+          e.type === 'accepted' ? 'badge-applied' :
+          e.type === 'replied' ? 'badge-replied' :
+          e.type === 'interview' ? 'badge-interview' :
+          'badge-pending'
+        }">${e.type.charAt(0).toUpperCase() + e.type.slice(1)}</span>
+        <span class="timeline-content">${e.text}</span>
+      </div>
+    `).join('');
+  }
+
+  // ─── Actions ───
+
+  async function updateAppStatus(appId, newStatus, selectEl) {
+    const app = (trackingData.applications || []).find(a => a.id === appId);
+    if (!app) return;
+    app.status = newStatus;
+    selectEl.className = `status-select status-${newStatus}`;
+    await fetch(`${API_BASE}/tracking`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(trackingData),
+    });
+  }
+
+  async function updateOutreachStatus(outreachId, newStatus, selectEl) {
+    await fetch(`${API_BASE}/tracking/outreach/${outreachId}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    selectEl.className = `status-select status-${newStatus}`;
+    loadData();
+  }
+
+  async function saveNote(appId, inputEl) {
+    const app = (trackingData.applications || []).find(a => a.id === appId);
+    if (!app) return;
+    app.notes = inputEl.value.trim();
+    await fetch(`${API_BASE}/tracking`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(trackingData),
+    });
+  }
+
+  function showMessage(title, body) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').textContent = body;
+    document.getElementById('msg-modal').classList.add('visible');
+  }
+
+  function closeModal() {
+    document.getElementById('msg-modal').classList.remove('visible');
+  }
+
+  function esc(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  loadData();
+</script>
+
+</body>
+</html>

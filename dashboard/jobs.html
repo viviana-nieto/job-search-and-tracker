@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>Job Search - All Jobs</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #333; padding: 72px 24px 80px; max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: #666; margin-bottom: 16px; font-size: 14px; }
+  .topnav { display: flex; gap: 0; background: #1e293b; padding: 0 24px; position: fixed; top: 0; left: 0; right: 0; z-index: 200; justify-content: center; }
+  .topnav a { font-size: 14px; font-weight: 500; color: #94a3b8; text-decoration: none; padding: 14px 20px; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; }
+  .topnav a:hover { color: #e2e8f0; border-bottom-color: #475569; }
+  .topnav a.active { color: #ffffff; border-bottom-color: #3b82f6; }
+  .stats { display: flex; gap: 16px; margin-bottom: 16px; }
+  .stat { background: white; border-radius: 8px; padding: 16px; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .stat-number { font-size: 28px; font-weight: 700; color: #2563eb; }
+  .stat-green .stat-number { color: #16a34a; }
+  .stat-purple .stat-number { color: #7c3aed; }
+  .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+  .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .filter-bar label { font-size: 13px; color: #475569; font-weight: 600; }
+  .filter-bar select, .filter-bar input { padding: 6px 10px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13px; }
+  .filter-bar input { width: 200px; }
+  .filter-bar button { background: #f1f5f9; border: 1px solid #d1d5db; padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .filter-bar button:hover { background: #e2e8f0; }
+  .filter-summary { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+  .job-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #2563eb; transition: box-shadow 0.2s; }
+  .job-card.priority-high { border-left-color: #2563eb; }
+  .job-card.priority-medium { border-left-color: #eab308; }
+  .job-card.priority-low { border-left-color: #d1d5db; }
+  .job-card.is-applied { border-left-color: #16a34a !important; }
+  .job-card.is-sent { border-left-color: #16a34a !important; }
+  .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .job-title { font-size: 16px; font-weight: 600; }
+  .job-company { font-size: 14px; color: #2563eb; font-weight: 500; }
+  .job-meta { font-size: 13px; color: #666; margin: 4px 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .meta-sep { color: #d1d5db; }
+  .job-salary { color: #16a34a; font-weight: 600; }
+  .no-salary { color: #94a3b8; font-style: italic; }
+  .job-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .tag { font-size: 11px; padding: 3px 8px; border-radius: 12px; background: #eff6ff; color: #2563eb; }
+  .tag-health { background: #f0fdf4; color: #16a34a; }
+  .tag-ai { background: #faf5ff; color: #7c3aed; }
+  .tag-robotics { background: #fff7ed; color: #c2410c; }
+  .tag-applied { background: #d1fae5; color: #047857; }
+  .tag-sent { background: #ede9fe; color: #7c3aed; }
+  .tag-fetch { background: #f1f5f9; color: #64748b; }
+  .tag-ats { background: #ecfdf5; color: #047857; font-weight: 600; }
+  .job-summary { font-size: 13px; color: #444; line-height: 1.6; padding: 10px 12px; background: #f8fafc; border-radius: 6px; border-left: 3px solid #2563eb; margin-bottom: 8px; }
+  .job-summary b { color: #1e40af; }
+  .btn-group { display: flex; gap: 6px; align-items: center; }
+  .btn { text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; border: none; }
+  .btn-apply { background: #2563eb; color: white; }
+  .btn-apply:hover { background: #1d4ed8; }
+  .btn-mark { background: #f1f5f9; color: #475569; border: 1px solid #d1d5db; }
+  .btn-mark:hover { background: #e2e8f0; }
+  .btn-mark.active { background: #d1fae5; color: #047857; border-color: #16a34a; }
+  .btn-sent { background: #f1f5f9; color: #7c3aed; border: 1px solid #d1d5db; }
+  .btn-sent:hover { background: #ede9fe; }
+  .btn-sent.active { background: #d1fae5; color: #047857; border-color: #16a34a; }
+  details summary { font-size: 13px; color: #2563eb; cursor: pointer; font-weight: 500; padding: 4px 0; }
+  .desc-full { font-size: 13px; color: #555; line-height: 1.8; padding: 16px; background: #f8fafc; border-radius: 6px; max-height: 500px; overflow-y: auto; margin-top: 6px; white-space: pre-wrap; word-wrap: break-word; }
+  .conn-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9; }
+  .conn-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .conn-label { font-size: 12px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 8px; }
+  .variant-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+  .conn-text { font-size: 13px; color: #333; background: #f8fafc; padding: 10px 12px; border-radius: 6px; cursor: pointer; line-height: 1.5; border: 1px dashed #d1d5db; }
+  .conn-text:hover { background: #eff6ff; }
+  .copy-hint { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+  .sent-form { display: none; margin-top: 10px; padding: 12px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; }
+  .sent-form.visible { display: block; }
+  .sent-form label { font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px; margin-top: 8px; }
+  .sent-form label:first-child { margin-top: 0; }
+  .sent-form input, .sent-form textarea { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; font-family: inherit; }
+  .sent-form textarea { height: 80px; resize: vertical; }
+  .sent-form .form-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .sent-form .btn-save { background: #7c3aed; color: white; border: none; padding: 6px 16px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .sent-form .btn-cancel { background: #f1f5f9; color: #475569; border: 1px solid #d1d5db; padding: 6px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .sent-details { font-size: 11px; color: #6b7280; margin-top: 6px; padding: 6px 8px; background: #f8fafc; border-radius: 4px; }
+  .sent-details a { color: #7c3aed; }
+  .alt-variants { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .variant-alt { display: flex; align-items: flex-start; gap: 8px; }
+  .variant-text-sm { font-size: 12px; color: #555; background: #f8fafc; padding: 6px 8px; border-radius: 4px; cursor: pointer; line-height: 1.4; border: 1px dashed #e5e7eb; flex: 1; }
+  .variant-text-sm:hover { background: #eff6ff; }
+  .submit-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 12px 24px; box-shadow: 0 -2px 10px rgba(0,0,0,0.15); display: flex; justify-content: center; align-items: center; gap: 24px; z-index: 100; }
+  .submit-btn { background: #16a34a; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .submit-btn:hover { background: #15803d; }
+  .submit-btn:disabled { background: #d1d5db; cursor: not-allowed; }
+  .loading { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
+  #jobs-container .section-title { font-size: 18px; font-weight: 600; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; }
+  .btn-ignore { background: #f1f5f9; color: #94a3b8; border: 1px solid #d1d5db; font-size: 11px; }
+  .btn-ignore:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+  .btn-ignore.active { background: #fef2f2; color: #dc2626; border-color: #dc2626; }
+  .btn-na { background: #f1f5f9; color: #94a3b8; border: 1px solid #d1d5db; font-size: 11px; }
+  .btn-na:hover { background: #f1f5f9; color: #64748b; border-color: #94a3b8; }
+  .btn-na.active { background: #f1f5f9; color: #64748b; border-color: #94a3b8; }
+  .job-card.is-ignored { opacity: 0.4; }
+  .match-section { margin: 10px 0 0; padding: 10px 12px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0; }
+  .match-header { font-size: 12px; font-weight: 600; color: #047857; margin-bottom: 6px; }
+  .match-item { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 12px; }
+  .match-name { font-weight: 600; color: #1e293b; }
+  .match-pos { color: #64748b; }
+  .match-badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #d1fae5; color: #047857; }
+  .match-link { color: #2563eb; text-decoration: none; font-size: 11px; }
+  .match-link:hover { text-decoration: underline; }
+  .btn-referral { background: #f1f5f9; color: #64748b; border: 1px solid #d1d5db; font-size: 11px; }
+  .btn-referral:hover { background: #eff6ff; color: #2563eb; border-color: #93c5fd; }
+  .btn-referral.active { background: #dbeafe; color: #1d4ed8; border-color: #3b82f6; }
+  .referral-form { display: none; margin-top: 8px; padding: 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; }
+  .referral-form.visible { display: block; }
+  .referral-form label { font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px; }
+  .referral-form input { width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
+  .referral-msg { font-size: 12px; color: #333; background: #f8fafc; padding: 10px; border-radius: 6px; cursor: pointer; line-height: 1.5; border: 1px dashed #d1d5db; margin-top: 6px; }
+  .referral-msg:hover { background: #eff6ff; }
+  .referral-badge { display: inline-flex; align-items: center; gap: 4px; background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+  .tag-referral { background: #dbeafe; color: #1d4ed8; }
+  @media (max-width: 768px) {
+    body { padding: 60px 12px 80px; }
+    h1 { font-size: 20px; }
+    .stats { flex-wrap: wrap; gap: 8px; }
+    .stat { min-width: calc(50% - 4px); flex: none; padding: 12px; }
+    .stat-number { font-size: 22px; }
+    .filter-bar { flex-direction: column; align-items: stretch; gap: 6px; }
+    .filter-bar input { width: 100%; }
+    .job-header { flex-direction: column; gap: 8px; }
+    .btn-group { align-self: flex-start; }
+    .job-meta { flex-wrap: wrap; margin-left: 0; }
+    .job-tags { margin-left: 0; }
+    .job-summary { margin: 8px 0; }
+    .conn-section { margin: 10px 0 0; }
+    .conn-text { font-size: 12px; }
+    .alt-variants { font-size: 11px; }
+    .submit-bar { padding: 10px 12px; gap: 12px; }
+    #jobs-container .section-title { font-size: 16px; }
+    .description-section { margin: 8px 0; }
+  }
+  @media (max-width: 480px) {
+    body { padding: 56px 8px 80px; }
+    .stat { min-width: 100%; }
+    .job-card { padding: 14px; }
+    .job-title { font-size: 14px; }
+    .btn { padding: 6px 10px; font-size: 12px; }
+    .topnav a { padding: 10px 14px; font-size: 13px; }
+    .submit-bar { flex-direction: column; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+<script src="data.js"></script>
+
+<div class="topnav">
+  <a href="jobs.html" class="active">All Jobs</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="companies.html">Pick Companies</a>
+</div>
+
+<h1>All Jobs</h1>
+<p class="subtitle">Persistent job browser. All fetched jobs in one place.</p>
+
+<div class="stats">
+  <div class="stat"><div class="stat-number" id="stat-total">-</div><div class="stat-label">Total PM Jobs</div></div>
+  <div class="stat stat-green"><div class="stat-number" id="stat-applied">0</div><div class="stat-label">Applied</div></div>
+  <div class="stat stat-purple"><div class="stat-number" id="stat-sent">0</div><div class="stat-label">Requests Sent</div></div>
+  <div class="stat"><div class="stat-number" id="stat-new">-</div><div class="stat-label">Not Applied</div></div>
+</div>
+
+<div class="filter-bar">
+  <label>Filters:</label>
+  <select id="f-date"><option value="all">All dates</option></select>
+  <select id="f-priority">
+    <option value="all">All priorities</option>
+    <option value="high">High</option>
+    <option value="medium">Medium</option>
+    <option value="low">Low</option>
+  </select>
+  <select id="f-status">
+    <option value="all">All statuses</option>
+    <option value="not-applied">Not applied</option>
+    <option value="applied">Applied</option>
+    <option value="sent">Request sent</option>
+    <option value="ignored">Ignored</option>
+    <option value="not-available">Not Available</option>
+    <option value="referral">Referral requested</option>
+    <option value="has-connections">Has connections</option>
+  </select>
+  <input type="text" id="f-search" placeholder="Search company or role...">
+  <button onclick="resetFilters()">Reset</button>
+  <span style="color:#d1d5db;">|</span>
+  <button onclick="selectVisible()">Select All Visible</button>
+  <button onclick="clearSelection()">Clear Selection</button>
+</div>
+<div class="filter-summary" id="filter-summary"></div>
+
+<div id="jobs-container"><div class="loading">Loading jobs...</div></div>
+
+<div class="submit-bar">
+  <span style="font-size:14px;color:#475569;"><span id="sel-count">0</span> selected</span>
+  <button class="submit-btn" id="submit-btn" disabled onclick="submitSelection()">Generate Application Materials</button>
+</div>
+
+<script>
+// Dual-mode: localhost uses local_server.py; everywhere else uses deployed /api
+const IS_LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
+const API = IS_LOCAL ? 'http://localhost:8777/api' : '/api';
+
+// Write auth wrapper — prompts for API key (cloud mode) then caches in sessionStorage
+async function apiPost(path, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (!IS_LOCAL) {
+    let key = sessionStorage.getItem('js_api_key');
+    if (!key) {
+      key = prompt('Enter API key to enable edits (one-time, cached per session):');
+      if (!key) return null;
+      sessionStorage.setItem('js_api_key', key.trim());
+      key = key.trim();
+    }
+    headers['x-api-key'] = key;
+  }
+  try {
+    const r = await fetch(`${API}${path}`, {
+      method: 'POST', headers, body: JSON.stringify(body),
+    });
+    if (r.status === 401) {
+      sessionStorage.removeItem('js_api_key');
+      alert('API key rejected. Refresh the page and try again.');
+      return null;
+    }
+    return r;
+  } catch (e) {
+    console.warn('apiPost failed:', e);
+    return null;
+  }
+}
+let allJobs = [];
+let trackingData = {};
+let appliedData = {};
+let sentData = {};
+let ignoredJobs = JSON.parse(localStorage.getItem('ignoredJobs') || '{}');
+let naJobs = JSON.parse(localStorage.getItem('naJobs') || '{}');
+let referralJobs = JSON.parse(localStorage.getItem('referralJobs') || '{}');
+let connectionMatches = {};
+let tailoredMessages = {};
+
+const HIGH_COMPANIES = ['anthropic','scale ai','openai','google','meta','uber','microsoft','adobe',
+  'intuit','pinterest','robinhood','glean','expedia','gusto','linkedin',
+  'ambience','color','verily','lark','eleanor','retell','level ai','workday'];
+const MEDIUM_COMPANIES = ['amazon','walmart','toast','ibm','dell','humana','charles schwab',
+  'pilot.com','weights','crusoe','okx','cvs'];
+const PM_KEYWORDS = ['product manager','product lead','head of product','vp of product','director of product','program manager','technical program manager'];
+
+function getPriority(j) {
+  const c = (j.company||'').toLowerCase();
+  const t = (j.title||'').toLowerCase();
+  for (const k of HIGH_COMPANIES) if (c.includes(k)) return 'high';
+  if (['agentic','ai agent','ai-first','responsible ai','ai safety','founding'].some(k => t.includes(k))) return 'high';
+  for (const k of MEDIUM_COMPANIES) if (c.includes(k)) return 'medium';
+  if (['principal','staff','director','head of','vp of'].some(k => t.includes(k))) return 'medium';
+  return 'low';
+}
+
+function isPM(j) {
+  return PM_KEYWORDS.some(k => (j.title||'').toLowerCase().includes(k));
+}
+
+function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+function getTags(j) {
+  const tags = [];
+  const c = (j.company||'').toLowerCase(), t = (j.title||'').toLowerCase();
+  if (['health','medical','care','clinical'].some(k => (c+t).includes(k))) tags.push(['Health Tech','tag-health']);
+  if (['ai','llm','ml','agentic','agent'].some(k => t.includes(k))) tags.push(['AI','tag-ai']);
+  if (['robot','autonomous'].some(k => (c+t).includes(k))) tags.push(['Robotics','tag-robotics']);
+  return tags;
+}
+
+function extractContext(desc, company, title) {
+  // Extract a short, relevant hook from the job description
+  if (!desc || desc.length < 50) return '';
+  const lower = desc.toLowerCase();
+  const titleLower = title.toLowerCase();
+
+  // Industry/mission keywords to match against Viviana's background
+  const hooks = [];
+
+  // Health/care context
+  if (['health','care','clinical','patient','medical','wellness'].some(k => lower.includes(k))) {
+    if (lower.includes('cancer')) hooks.push('closing cancer care gaps through technology');
+    else if (lower.includes('mental health') || lower.includes('behavioral')) hooks.push('behavioral health and preventive care');
+    else if (lower.includes('patient')) hooks.push('improving patient outcomes with technology');
+    else hooks.push('health tech that drives real patient impact');
+  }
+
+  // AI/ML context
+  if (['llm','agentic','agent','generative ai','conversational'].some(k => lower.includes(k))) {
+    hooks.push('building agentic AI systems from 0 to 1');
+  } else if (['machine learning','ml model','ai platform'].some(k => lower.includes(k))) {
+    hooks.push('shipping ML products at scale');
+  }
+
+  // Marketplace/platform
+  if (['marketplace','platform','two-sided','supply and demand'].some(k => lower.includes(k))) {
+    hooks.push('building marketplace and platform products');
+  }
+
+  // Enterprise/B2B
+  if (['enterprise','b2b','saas'].some(k => lower.includes(k))) {
+    hooks.push('enterprise AI deployment at scale');
+  }
+
+  // Robotics/autonomous
+  if (['robot','autonomous','fleet','warehouse','logistics'].some(k => lower.includes(k))) {
+    hooks.push('AI for physical-world operations');
+  }
+
+  // Data/analytics
+  if (['data platform','analytics','forecasting','demand'].some(k => lower.includes(k))) {
+    hooks.push('data products and demand forecasting');
+  }
+
+  return hooks.length > 0 ? hooks[0] : '';
+}
+
+function getVariants(j) {
+  const size = getCompanySize(j.company);
+  const pm = size === 'startup' ? 'startup PM' : 'PM';
+  const title = j.title || '';
+  const company = j.company || '';
+  const hook = extractContext(j.description, company, title);
+
+  // Build context-aware messages
+  const passion = hook ? ` Passionate about ${hook}.` : '';
+  const experience = hook ? ` I've built AI-powered products focused on ${hook}.` : ' I build AI products hands-on.';
+
+  // Variant A: Applied + founder credibility + context hook
+  let A = `Hi [Name], I applied for the ${title} role at ${company}. As a ${pm} and founder, I built AI-powered products from 0 to 1. 10+ years in AI products.${passion} Would love to connect. ~Viviana`;
+
+  // Variant B: Applied + specific skills + context match
+  let B = `Hi [Name], I applied for the ${title} role at ${company}.${experience} Shipped ML roadmaps, agentic frameworks, and enterprise AI. Would love to connect! ~Viviana`;
+
+  // Variant C: Mission-driven + context hook
+  let C = `Hi [Name], I'm exploring my next opportunity and applied for the ${title} role at ${company}. Love what the team is building.${passion} I'm a ${pm} with 10+ years in AI. Would love to connect! ~Viviana`;
+
+  // Variant D: Quantified impact + context
+  let D = `Hi [Name], I applied for the ${title} role at ${company}. I'm a ${pm} who has driven $100M+ in documented impact across AI products.${passion} Would love to learn more! ~Viviana`;
+
+  // Trim any that exceed 300 chars by removing the passion/experience clause
+  const trim = (msg) => {
+    if (msg.length <= 300) return msg;
+    // Remove the context clause and retry
+    return msg.replace(passion, '').replace(experience, ' I build AI products hands-on.');
+  };
+
+  return { A: trim(A), B: trim(B), C: trim(C), D: trim(D) };
+}
+
+const LARGE_COS = ['google','linkedin','uber','meta','apple','microsoft','amazon','paypal','stripe','intuit','square','zendesk','lattice','nvidia','genentech','deloitte','plaid','rippling','doordash','airbnb','salesforce','adobe','boston dynamics','intuitive surgical'];
+function getCompanySize(company) {
+  const c = (company||'').toLowerCase();
+  return LARGE_COS.some(k => c.includes(k)) ? 'large' : 'startup';
+}
+
+function summarizeJD(desc, company, title) {
+  if (!desc || desc.length < 50) return `<b>Company:</b> ${esc(company)}<br><b>Role:</b> ${esc(title)}`;
+  const lines = desc.split('\n').map(l=>l.trim()).filter(l=>l);
+  let cs = '';
+  for (let i=0;i<lines.length;i++) {
+    if (['about us','about '+company.toLowerCase().slice(0,10),'who we are','our mission'].some(k=>lines[i].toLowerCase().includes(k))) {
+      for (let nl of lines.slice(i+1,i+6)) {
+        if (nl.length>50 && !['about','key ','why ','http'].some(k=>nl.toLowerCase().startsWith(k))) { cs=nl.slice(0,200)+(nl.length>200?'...':''); break; }
+      }
+      break;
+    }
+  }
+  if(!cs) for(const l of lines) if(l.length>60 && !['responsibilities','qualifications','requirements','benefits','compensation'].some(k=>l.toLowerCase().includes(k))) { cs=l.slice(0,200)+(l.length>200?'...':''); break; }
+  let rs = '';
+  for(let i=0;i<lines.length;i++) {
+    if(['the role','about the role',"what you'll do",'you will','as a ',"we're seeking",'this role'].some(k=>lines[i].toLowerCase().includes(k))) {
+      const cands = lines[i].length>80 ? lines.slice(i,i+5) : lines.slice(i+1,i+5);
+      for(const c of cands) if(c.length>50) { rs=c.slice(0,250)+(c.length>250?'...':''); break; }
+      break;
+    }
+  }
+  if(!rs) rs = title;
+  return `<b>Company:</b> ${esc(cs||company)}<br><b>Role:</b> ${esc(rs)}`;
+}
+
+function jobKey(j) { return `${j.company}|||${j.title}`; }
+
+function renderJobs() {
+  const dateVal = document.getElementById('f-date').value;
+  const prioVal = document.getElementById('f-priority').value;
+  const statusVal = document.getElementById('f-status').value;
+  const searchVal = document.getElementById('f-search').value.toLowerCase();
+
+  const appliedMap = {};
+  (appliedData.jobs||[]).forEach(j => appliedMap[jobKey(j)] = j);
+  const sentMap = {};
+  (sentData.requests||[]).forEach(r => sentMap[jobKey(r)] = r);
+
+  const pmJobs = allJobs.filter(isPM);
+  const seen = new Set();
+  const unique = [];
+  for (const j of pmJobs) {
+    const k = jobKey(j).toLowerCase();
+    if (!seen.has(k)) { seen.add(k); unique.push(j); }
+  }
+
+  // Assign variants
+  const variants = ['A','B','C','D'];
+  unique.forEach((j,i) => j._variant = variants[i%4]);
+  unique.forEach(j => j._priority = getPriority(j));
+
+  // Filter
+  const filtered = unique.filter(j => {
+    const k = jobKey(j);
+    // Hide ignored and N/A jobs unless specifically filtering for them
+    if (statusVal !== 'ignored' && statusVal !== 'not-available' && (ignoredJobs[k] || naJobs[k])) return false;
+    if (statusVal === 'ignored' && !ignoredJobs[k]) return false;
+    if (statusVal === 'not-available' && !naJobs[k]) return false;
+    if (statusVal === 'referral' && !referralJobs[k]) return false;
+    if (statusVal === 'has-connections' && !(connectionMatches[k]?.length > 0)) return false;
+    if (dateVal !== 'all' && j.fetch_date !== dateVal) return false;
+    if (prioVal !== 'all' && j._priority !== prioVal) return false;
+    if (statusVal === 'applied' && !appliedMap[k]) return false;
+    if (statusVal === 'not-applied' && (appliedMap[k] || ignoredJobs[k])) return false;
+    if (statusVal === 'sent' && !sentMap[k]) return false;
+    if (searchVal && !(j.company||'').toLowerCase().includes(searchVal) && !(j.title||'').toLowerCase().includes(searchVal)) return false;
+    return true;
+  });
+
+  // Sort by priority
+  const order = {high:0, medium:1, low:2};
+  filtered.sort((a,b) => order[a._priority] - order[b._priority]);
+
+  // Update stats
+  document.getElementById('stat-total').textContent = unique.length;
+  document.getElementById('stat-applied').textContent = Object.keys(appliedMap).length;
+  document.getElementById('stat-sent').textContent = Object.keys(sentMap).length;
+  document.getElementById('stat-new').textContent = unique.length - Object.keys(appliedMap).length;
+
+  // Filter summary
+  const parts = [];
+  if (dateVal !== 'all') parts.push(`date: ${dateVal}`);
+  if (prioVal !== 'all') parts.push(`priority: ${prioVal}`);
+  if (statusVal !== 'all') parts.push(`status: ${statusVal}`);
+  if (searchVal) parts.push(`search: "${searchVal}"`);
+  document.getElementById('filter-summary').textContent = parts.length
+    ? `Showing ${filtered.length} of ${unique.length} jobs (${parts.join(', ')})`
+    : `Showing all ${filtered.length} jobs`;
+
+  // Group by priority
+  const groups = {high:[], medium:[], low:[]};
+  filtered.forEach(j => groups[j._priority].push(j));
+
+  const container = document.getElementById('jobs-container');
+  let html = '';
+
+  for (const [prio, label] of [['high','High Priority'],['medium','Medium Priority'],['low','Other']]) {
+    if (groups[prio].length === 0) continue;
+    html += `<div class="section-title">${label} (${groups[prio].length})</div>`;
+    for (const j of groups[prio]) {
+      const k = jobKey(j);
+      const isApplied = !!appliedMap[k];
+      const isSent = !!sentMap[k];
+      const sentInfo = sentMap[k];
+      const tags = getTags(j);
+      const sal = j.salary || '';
+      const url = (j.job_apply_link || j.url || '').split('?')[0];
+      const v = j._variant;
+      const allV = getVariants(j);
+      const vColors = {A:'#2563eb',B:'#7c3aed',C:'#16a34a',D:'#c2410c'};
+      const vLabels = {A:'Credibility',B:'Skills',C:'Mission',D:'Impact'};
+
+      let statusTags = '';
+      if (isApplied) statusTags += '<span class="tag tag-applied">Applied</span>';
+      if (isSent) statusTags += `<span class="tag tag-sent">Sent to ${esc(sentInfo.name||'?')}</span>`;
+      if (referralJobs[k]) statusTags += `<span class="tag tag-referral">Referral: ${esc(referralJobs[k].name)}</span>`;
+
+      // Connection matches
+      const jobMatches = connectionMatches[k] || [];
+      let matchHtml = '';
+      if (jobMatches.length > 0) {
+        matchHtml = `<div class="match-section"><div class="match-header">Connections at ${esc(j.company)} (${jobMatches.length})</div>`;
+        jobMatches.forEach(m => {
+          matchHtml += `<div class="match-item">
+            <span class="match-name">${esc(m.name)}</span>
+            <span class="match-pos">${esc(m.position)}</span>
+            <span class="match-badge">${m.match_type}</span>
+            ${m.linkedin_url ? `<a href="${esc(m.linkedin_url)}" target="_blank" class="match-link">Profile</a>` : ''}
+            <button class="btn btn-referral" onclick="showReferralForm(this,'${esc(k)}','${esc(m.name)}','${esc(m.company)}','${esc(m.linkedin_url||'')}')" style="margin-left:auto;padding:2px 8px;">Ask Referral</button>
+          </div>`;
+        });
+        matchHtml += '</div>';
+      }
+
+      let otherVariants = '';
+      for (const ov of ['A','B','C','D']) {
+        if (ov === v) continue;
+        otherVariants += `<div class="variant-alt">
+          <span class="variant-badge" style="background:${vColors[ov]}20;color:${vColors[ov]}">Variant ${ov}</span>
+          <span class="variant-text-sm" onclick="navigator.clipboard.writeText(this.innerText).then(()=>{this.style.background='#d1fae5';setTimeout(()=>this.style.background='#f8fafc',1000)})">${esc(allV[ov])}</span>
+        </div>`;
+      }
+
+      let sentDetailsHtml = '';
+      if (isSent) {
+        sentDetailsHtml = `<div class="sent-details">Sent to <b>${esc(sentInfo.name||'?')}</b> on ${esc(sentInfo.sent_at||'?')}${sentInfo.linkedin_url ? ` | <a href="${esc(sentInfo.linkedin_url)}" target="_blank">Profile</a>` : ''}</div>`;
+      }
+
+      html += `
+      <div class="job-card priority-${prio} ${isApplied?'is-applied':''} ${isSent?'is-sent':''} ${ignoredJobs[k]?'is-ignored':''}" data-key="${esc(k)}" data-fetch="${esc(j.fetch_date||'')}">
+        <div class="job-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" class="job-cb" value="${esc(k)}" data-variant="${v}" style="width:18px;height:18px;cursor:pointer;">
+            <div>
+              <div class="job-title">${esc(j.title)} ${url ? `<a href="${esc(url)}" target="_blank" style="font-size:13px;color:#2563eb;text-decoration:none;margin-left:4px;" title="Open job posting"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>` : ''}</div>
+              <div class="job-company">${esc(j.company)}</div>
+            </div>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-mark ${isApplied?'active':''}" onclick="toggleApplied(this,'${esc(k)}')">${isApplied?'Applied':'Mark Applied'}</button>
+            <button class="btn btn-ignore ${ignoredJobs[k]?'active':''}" onclick="toggleIgnore(this,'${esc(k)}')">${ignoredJobs[k]?'Ignored':'Ignore'}</button>
+            <button class="btn btn-na ${naJobs[k]?'active':''}" onclick="toggleNA(this,'${esc(k)}')">${naJobs[k]?'N/A':'N/A'}</button>
+          </div>
+        </div>
+        <div class="job-meta">
+          <span>${esc(j.location||'')}</span>
+          <span class="meta-sep">&bull;</span>
+          ${sal ? `<span class="job-salary">${esc(sal)}</span>` : '<span class="no-salary">Salary not listed</span>'}
+          <span class="meta-sep">&bull;</span>
+          <span class="tag tag-fetch">Fetched ${esc(j.fetch_date||'?')}</span>
+          ${['greenhouse','lever','ashby'].includes(j.source) ? `<span class="tag tag-ats">${j.source.toUpperCase()}</span>` : ''}
+        </div>
+        <div class="job-tags">${tags.map(([n,c])=>`<span class="tag ${c}">${n}</span>`).join('')} ${statusTags}</div>
+        <div class="job-summary">${summarizeJD(j.description, j.company, j.title)}</div>
+        <details><summary>Show Full Job Description</summary><div class="desc-full">${esc(j.description||'No description')}</div></details>
+        ${matchHtml}
+        <div id="ref-${esc(k).replace(/[^a-zA-Z0-9]/g,'-')}" class="referral-form">
+          <label>Referral request message (click to copy)</label>
+          <div class="referral-msg" id="ref-msg-${esc(k).replace(/[^a-zA-Z0-9]/g,'-')}" onclick="navigator.clipboard.writeText(this.innerText).then(()=>{this.style.background='#d1fae5';setTimeout(()=>this.style.background='#f8fafc',1000)})"></div>
+          <div style="margin-top:8px;display:flex;gap:6px;">
+            <button class="btn btn-mark" onclick="saveReferral('${esc(k)}',this)">Save as Sent</button>
+            <button class="btn" onclick="this.closest('.referral-form').classList.remove('visible')" style="background:#f1f5f9;color:#475569;border:1px solid #d1d5db;">Cancel</button>
+          </div>
+        </div>
+        <div class="conn-section">
+          <div class="conn-header">
+            <div class="conn-label">
+              Connection Request
+              ${tailoredMessages[k]
+                ? `<span class="variant-badge" style="background:#d1fae5;color:#047857;">Tailored</span>
+                   <span style="font-size:10px;color:#94a3b8;">${tailoredMessages[k].length}/300</span>`
+                : `<span class="variant-badge" style="background:#f1f5f9;color:#94a3b8;">Generic</span>
+                   <span style="font-size:10px;color:#94a3b8;">${allV[v].length}/300</span>`
+              }
+            </div>
+            <button class="btn btn-sent ${isSent?'active':''}" onclick="showSentForm(this,'${esc(k)}')">${isSent?'Sent':'Mark Sent'}</button>
+          </div>
+          <div class="conn-text" onclick="navigator.clipboard.writeText(this.innerText).then(()=>{this.style.background='#d1fae5';setTimeout(()=>this.style.background='#f8fafc',1000)})">${esc(tailoredMessages[k] || allV[v])}</div>
+          <div class="copy-hint">Click to copy | Replace [Name] with recruiter's first name</div>
+          ${sentDetailsHtml}
+          <div class="sent-form" id="sf-${esc(k).replace(/[^a-zA-Z0-9]/g,'-')}">
+            <label>Recipient Name</label>
+            <input type="text" class="sf-name" placeholder="e.g. Lauren Clark" value="${esc(sentInfo?.name||'')}">
+            <label>Recipient LinkedIn URL</label>
+            <input type="text" class="sf-url" placeholder="e.g. https://linkedin.com/in/lauren" value="${esc(sentInfo?.linkedin_url||'')}">
+            <label>Message Sent</label>
+            <textarea class="sf-msg">${esc(sentInfo?.message||tailoredMessages[k]||allV[v])}</textarea>
+            <div class="form-actions">
+              <button class="btn-save" onclick="saveSent('${esc(k)}',this)">Save</button>
+              <button class="btn-cancel" onclick="cancelSent(this)">Cancel</button>
+            </div>
+          </div>
+          <details style="margin-top:6px;"><summary style="font-size:12px;color:#94a3b8;">Other variants</summary><div class="alt-variants">${otherVariants}</div></details>
+        </div>
+      </div>`;
+    }
+  }
+
+  if (filtered.length === 0) {
+    html = '<div class="loading">No jobs match your filters.</div>';
+  }
+
+  container.innerHTML = html;
+  updateSelCount();
+}
+
+// ─── Applied/Sent Actions ───
+
+async function toggleApplied(btn, key) {
+  const parts = key.split('|||');
+  const company = parts[0], title = parts[1];
+  const now = new Date();
+  const today = now.toISOString().slice(0,10);
+  const nowIso = now.toISOString();
+
+  // Find existing by company + role (case-insensitive)
+  const existing = (trackingData.applications||[]).find(
+    a => a.company.toLowerCase() === company.toLowerCase()
+      && (a.role||'').toLowerCase() === title.toLowerCase()
+  );
+
+  if (existing) {
+    const isCurrentlyApplied = existing.status === 'applied' || !!existing.dates?.applied;
+    if (isCurrentlyApplied) {
+      // UNMARK: confirm to prevent accidental taps
+      if (!confirm(`Unmark "${company} — ${title}" as applied?`)) return;
+      existing.status = 'saved';
+      if (existing.dates) {
+        existing.dates.applied = null;
+        existing.dates.applied_at = null;
+      }
+    } else {
+      // MARK applied
+      existing.status = 'applied';
+      if (!existing.dates) existing.dates = {};
+      existing.dates.applied = today;
+      existing.dates.applied_at = nowIso;
+    }
+  } else {
+    // Create new application entry locally
+    const slug = (company + ' ' + title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    trackingData.applications.push({
+      id: `${today}-${slug}`,
+      company: company,
+      role: title,
+      url: null,
+      source: 'linkedin',
+      company_size: 'unknown',
+      salary_range: null,
+      location: null,
+      status: 'applied',
+      dates: { saved: today, applied: today, applied_at: nowIso, rejected: null, offer: null },
+      cover_letter: null,
+      outreach: [],
+      notes: '',
+    });
+  }
+
+  // Save to server (cloud or local)
+  if (serverAvailable) {
+    await apiPost('/tracking', trackingData);
+  }
+
+  rebuildShims();
+  renderJobs();
+}
+
+function toggleIgnore(btn, key) {
+  if (ignoredJobs[key]) {
+    delete ignoredJobs[key];
+  } else {
+    ignoredJobs[key] = true;
+  }
+  localStorage.setItem('ignoredJobs', JSON.stringify(ignoredJobs));
+  renderJobs();
+}
+
+function toggleNA(btn, key) {
+  if (naJobs[key]) {
+    delete naJobs[key];
+  } else {
+    naJobs[key] = true;
+  }
+  localStorage.setItem('naJobs', JSON.stringify(naJobs));
+  renderJobs();
+}
+
+function showReferralForm(btn, key, name, company, linkedinUrl) {
+  const formId = 'ref-' + key.replace(/[^a-zA-Z0-9]/g, '-');
+  const msgId = 'ref-msg-' + key.replace(/[^a-zA-Z0-9]/g, '-');
+  const form = document.getElementById(formId);
+  const msgEl = document.getElementById(msgId);
+  if (!form) return;
+
+  // Store referral target info on the form
+  form.dataset.refName = name;
+  form.dataset.refUrl = linkedinUrl;
+
+  // Generate tailored referral message
+  const parts = key.split('|||');
+  const jobTitle = parts[1] || '';
+  const jobCompany = parts[0] || '';
+  const size = getCompanySize(jobCompany);
+  const pm = size === 'startup' ? 'startup PM' : 'PM';
+
+  const msg = `Hi ${name}, I recently applied for the ${jobTitle} role at ${jobCompany}. Since you're there, I wanted to reach out directly. I'm a ${pm} with 10+ years in AI products. Would you be open to putting in a referral? Happy to send my resume. Thanks! ~Viviana`;
+
+  msgEl.textContent = msg;
+  form.classList.add('visible');
+}
+
+function saveReferral(key, btn) {
+  const formId = 'ref-' + key.replace(/[^a-zA-Z0-9]/g, '-');
+  const form = document.getElementById(formId);
+  const name = form?.dataset.refName || '';
+  const url = form?.dataset.refUrl || '';
+
+  referralJobs[key] = { name, linkedin_url: url, date: new Date().toISOString().slice(0, 10) };
+  localStorage.setItem('referralJobs', JSON.stringify(referralJobs));
+  form.classList.remove('visible');
+  renderJobs();
+}
+
+function showSentForm(btn, key) {
+  const formId = 'sf-' + key.replace(/[^a-zA-Z0-9]/g, '-');
+  const form = document.getElementById(formId);
+  if (form) {
+    form.classList.toggle('visible');
+    // Pre-fill message from the conn-text above
+    if (!form.querySelector('.sf-msg').value) {
+      const card = btn.closest('.job-card');
+      form.querySelector('.sf-msg').value = card.querySelector('.conn-text').innerText;
+    }
+  }
+}
+
+function cancelSent(btn) {
+  btn.closest('.sent-form').classList.remove('visible');
+}
+
+async function saveSent(key, btn) {
+  const form = btn.closest('.sent-form');
+  const parts = key.split('|||');
+  const company = parts[0], title = parts[1];
+  const today = new Date().toISOString().slice(0,10);
+
+  const card = btn.closest('.job-card');
+  const variant = card ? card.querySelector('.job-cb')?.dataset.variant : null;
+  const msg = form.querySelector('.sf-msg').value;
+  const name = form.querySelector('.sf-name').value;
+  const slug = (name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  const outreachEntry = {
+    id: `outreach-${today}-${slug}`,
+    name: name,
+    recipient_role: 'unknown',
+    linkedin_url: form.querySelector('.sf-url').value,
+    type: 'connection-request',
+    variant: variant,
+    message: msg,
+    message_length: msg.length,
+    dates: { sent: today, accepted: null, replied: null, interview: null },
+    outcome: 'pending',
+    response_time_days: null,
+    follow_ups: [],
+  };
+
+  // Find or create application entry
+  let app = (trackingData.applications||[]).find(
+    a => a.company.toLowerCase() === company.toLowerCase()
+      && (a.role||'').toLowerCase() === title.toLowerCase()
+  );
+  if (app) {
+    app.outreach.push(outreachEntry);
+  } else {
+    const appSlug = (company + ' ' + title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    app = {
+      id: `${today}-${appSlug}`,
+      company, role: title, url: null, source: 'linkedin',
+      company_size: 'unknown', salary_range: null, location: null,
+      status: 'applied',
+      dates: { saved: today, applied: today, rejected: null, offer: null },
+      cover_letter: null, outreach: [outreachEntry], notes: '',
+    };
+    trackingData.applications.push(app);
+  }
+
+  if (serverAvailable) {
+    await apiPost('/tracking', trackingData);
+  }
+
+  rebuildShims();
+  form.classList.remove('visible');
+  renderJobs();
+}
+
+// ─── Selection ───
+
+function updateSelCount() {
+  const n = document.querySelectorAll('.job-cb:checked').length;
+  document.getElementById('sel-count').textContent = n;
+  document.getElementById('submit-btn').disabled = n === 0;
+}
+
+document.addEventListener('change', e => {
+  if (e.target.classList.contains('job-cb')) updateSelCount();
+});
+
+function selectVisible() {
+  document.querySelectorAll('.job-card:not([style*="display: none"]) .job-cb').forEach(cb => cb.checked = true);
+  updateSelCount();
+}
+function clearSelection() {
+  document.querySelectorAll('.job-cb').forEach(cb => cb.checked = false);
+  updateSelCount();
+}
+
+function submitSelection() {
+  const selected = [];
+  document.querySelectorAll('.job-cb:checked').forEach(cb => {
+    const p = cb.value.split('|||');
+    selected.push({ company:p[0], title:p[1], variant:cb.dataset.variant });
+  });
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const data = { date: new Date().toISOString().slice(0,10), generated_at: new Date().toISOString(), selected_jobs: selected, source: 'data/jobs/all-jobs.json' };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `selected-jobs-${ts}.json`;
+  a.click();
+}
+
+// ─── Filters ───
+
+function resetFilters() {
+  document.getElementById('f-date').value = 'all';
+  document.getElementById('f-priority').value = 'all';
+  document.getElementById('f-status').value = 'all';
+  document.getElementById('f-search').value = '';
+  renderJobs();
+}
+
+['f-date','f-priority','f-status'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderJobs);
+});
+document.getElementById('f-search').addEventListener('input', renderJobs);
+
+// ─── Init ───
+
+function rebuildShims() {
+  // Build backward-compatible appliedData/sentData from tracking
+  // Match by company + role/title (case-insensitive)
+  const apps = trackingData.applications || [];
+  appliedData = { jobs: [] };
+  sentData = { requests: [] };
+
+  // Build a lookup by "company|||role" (lowercase) for applied status
+  // Note: explicit `status === 'saved'` wins even if dates.applied lingers (legacy data)
+  const appliedLookup = {};
+  apps.forEach(app => {
+    if (app.status === 'saved') return;
+    if (app.status === 'applied' || app.dates?.applied) {
+      const key = `${(app.company||'').toLowerCase()}|||${(app.role||'').toLowerCase()}`;
+      appliedLookup[key] = app;
+    }
+  });
+
+  // For each job in allJobs, check if there's a matching applied entry
+  (allJobs || []).forEach(j => {
+    const key = `${(j.company||'').toLowerCase()}|||${(j.title||'').toLowerCase()}`;
+    const app = appliedLookup[key];
+    if (app) {
+      appliedData.jobs.push({
+        company: j.company,
+        title: j.title,
+        applied_date: app.dates?.applied || '',
+        status: app.status,
+      });
+    }
+  });
+
+  // Also add tracking entries that don't match any allJobs title exactly
+  apps.forEach(app => {
+    if (app.status === 'saved') return;
+    if (app.status === 'applied' || app.dates?.applied) {
+      const key = `${(app.company||'').toLowerCase()}|||${(app.role||'').toLowerCase()}`;
+      const alreadyAdded = appliedData.jobs.some(
+        j => `${j.company.toLowerCase()}|||${j.title.toLowerCase()}` === key
+      );
+      if (!alreadyAdded) {
+        appliedData.jobs.push({
+          company: app.company,
+          title: app.role || '',
+          applied_date: app.dates?.applied || '',
+          status: app.status,
+        });
+      }
+    }
+
+    (app.outreach || []).forEach(o => {
+      sentData.requests.push({
+        company: app.company,
+        title: app.role || '',
+        name: o.name || '',
+        linkedin_url: o.linkedin_url || '',
+        message: o.message || '',
+        sent_at: o.dates?.sent || '',
+        status: o.outcome || 'pending',
+      });
+    });
+  });
+}
+
+let serverAvailable = false;
+
+async function init() {
+  // Local-mode: start with embedded data.js as fallback, then try localhost server
+  // Cloud-mode: fetch from /api (authoritative) — data.js is ignored on cloud deploys
+  allJobs = window.ALL_JOBS_DATA || [];
+  trackingData = window.TRACKING_DATA || { applications: [], unlinked_outreach: [], legacy_applications: [], stats: {} };
+  connectionMatches = window.CONNECTION_MATCHES || {};
+  tailoredMessages = window.TAILORED_MESSAGES || {};
+
+  try {
+    const [jobsResp, trackingResp, matchesResp] = await Promise.all([
+      fetch(`${API}/jobs`),
+      fetch(`${API}/tracking`),
+      fetch(`${API}/matches`).catch(() => null),
+    ]);
+    if (jobsResp.ok) allJobs = await jobsResp.json();
+    if (trackingResp.ok) trackingData = await trackingResp.json();
+    if (matchesResp && matchesResp.ok) {
+      const m = await matchesResp.json();
+      // /api/matches returns the full object with a .matches key, or just the map
+      connectionMatches = m.matches || m || connectionMatches;
+    }
+    serverAvailable = true;
+  } catch { serverAvailable = false; }
+
+  rebuildShims();
+
+  // Build date filter
+  const dates = new Set();
+  allJobs.forEach(j => { if (j.fetch_date) dates.add(j.fetch_date); });
+  const sel = document.getElementById('f-date');
+  [...dates].sort().reverse().forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    sel.appendChild(opt);
+  });
+
+  renderJobs();
+
+  if (!serverAvailable && allJobs.length > 0) {
+    console.log('Running in offline mode (data.js). Start server for Mark Applied/Sent features.');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

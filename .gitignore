@@ -3,15 +3,21 @@ config/*.json
 !config/*.sample.json
 !config/humanizer-rules.json
 
-# Data files
+# Data files (keep templates)
 data/connections.csv
 data/outreach-history.json
+data/tracking.json
+data/connection-matches.json
 data/company-sizes.json
 data/applied-jobs.json
 data/selected-jobs.json
 data/sent-requests.json
+data/resume.*
 data/jobs/*.json
 !data/jobs/sample-job.json
+
+# Dashboard generated data
+dashboard/data.js
 
 # Outputs
 outputs/
