@@ -1,64 +1,43 @@
 #!/usr/bin/env python3
-"""Log outreach, update outcomes, and show stats for job search networking."""
+"""Log outreach, update outcomes, and show stats for job search networking.
+
+Thin CLI wrapper around scripts/tracking.py — the v3.0 tracking module is the
+single source of truth for reading and writing data/tracking.json.
+"""
 
 import argparse
-import json
 import os
 import sys
-from datetime import date, datetime
+from datetime import date
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HISTORY_FILE = os.path.join(PROJECT_DIR, "data", "outreach-history.json")
 
-# Import company classifier
+# Same-directory imports (matches the existing pattern for company_classifier).
 sys.path.insert(0, os.path.join(PROJECT_DIR, "scripts"))
-from company_classifier import classify
-
-
-def load_history():
-    with open(HISTORY_FILE) as f:
-        return json.load(f)
-
-
-def save_history(data):
-    data["metadata"]["last_updated"] = date.today().isoformat()
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+import tracking  # noqa: E402
+from company_classifier import classify  # noqa: E402
 
 
 def log_outreach(name, company, recipient_role, msg_type, message,
                  job_id=None, linkedin_url=None, context="job_search"):
-    """Log a new outreach entry."""
-    history = load_history()
+    """Log a new outreach entry via the tracking module."""
+    data = tracking.load()
     company_size = classify(company)
 
-    entry = {
-        "name": name,
-        "company": company,
-        "position": recipient_role,
-        "date": date.today().isoformat(),
-        "direction": "OUTGOING",
-        "message": message,
-        "linkedin_url": linkedin_url,
-        "context": context,
-        "status": "pending",
-        "type": msg_type,
-        "job_id": job_id,
-        "company_size": company_size,
-        "recipient_role": recipient_role,
-        "sent_date": None,
-        "accepted_date": None,
-        "replied_date": None,
-        "interview_date": None,
-        "outcome": "pending",
-        "response_time_days": None
-    }
-
-    history["connections"].append(entry)
-    history["stats"]["total_connections_sent"] = len([
-        c for c in history["connections"] if c.get("direction") == "OUTGOING"
-    ])
-    save_history(history)
+    tracking.log_outreach(
+        data,
+        name=name,
+        company=company,
+        recipient_role=recipient_role,
+        msg_type=msg_type,
+        message=message,
+        job_id=job_id,
+        linkedin_url=linkedin_url,
+        company_size=company_size,
+        role_for_application=None,
+        context=context,
+    )
+    tracking.save(data)
 
     print(f"Logged outreach to {name} at {company} ({msg_type}, {company_size})")
     if job_id:
@@ -66,70 +45,36 @@ def log_outreach(name, company, recipient_role, msg_type, message,
 
 
 def update_outcome(name, company, status, update_date=None):
-    """Update the outcome of an existing outreach entry."""
-    history = load_history()
+    """Update the outcome of an existing outreach entry via the tracking module."""
+    data = tracking.load()
     update_date = update_date or date.today().isoformat()
 
-    found = False
-    for entry in history["connections"]:
-        if (entry["name"].lower() == name.lower() and
-                entry.get("company", "").lower() == company.lower()):
-            found = True
-
-            if status == "sent":
-                entry["sent_date"] = update_date
-                entry["status"] = "pending"
-            elif status == "accepted":
-                entry["accepted_date"] = update_date
-                entry["status"] = "connected"
-                entry["outcome"] = "accepted"
-                if entry.get("sent_date"):
-                    sent = datetime.fromisoformat(entry["sent_date"])
-                    accepted = datetime.fromisoformat(update_date)
-                    entry["response_time_days"] = (accepted - sent).days
-            elif status == "replied":
-                entry["replied_date"] = update_date
-                entry["status"] = "connected"
-                entry["outcome"] = "replied"
-            elif status == "interview":
-                entry["interview_date"] = update_date
-                entry["outcome"] = "interview"
-            elif status == "no_response":
-                entry["outcome"] = "no_response"
-            elif status == "declined":
-                entry["status"] = "declined"
-                entry["outcome"] = "declined"
-
-            print(f"Updated {name} at {company}: {status} ({update_date})")
-            break
-
-    if not found:
+    ok = tracking.update_outcome(data, name, company, status, today=update_date)
+    if not ok:
         print(f"Error: No outreach found for {name} at {company}", file=sys.stderr)
         sys.exit(1)
 
-    # Update stats
-    outcomes = [c.get("outcome") for c in history["connections"]]
-    history["stats"]["responses_received"] = sum(1 for o in outcomes if o in ("replied", "interview"))
-    history["stats"]["interviews_scheduled"] = sum(1 for o in outcomes if o == "interview")
-
-    save_history(history)
+    tracking.save(data)
+    print(f"Updated {name} at {company}: {status} ({update_date})")
 
 
 def show_stats():
     """Display outreach statistics and performance breakdown."""
-    history = load_history()
-    connections = history["connections"]
+    data = tracking.load()
 
-    total = len([c for c in connections if c.get("direction") == "OUTGOING"])
+    # Flatten every outreach entry (nested under applications + unlinked).
+    entries = [entry for entry, _parent in tracking.iter_outreach(data)]
+
+    total = len(entries)
     print(f"\n=== Outreach Stats ===\n")
     print(f"Total outreach sent: {total}")
-    print(f"Applications: {len(history.get('applications', []))}")
+    print(f"Applications: {len(data.get('applications', []))}")
     print()
 
     # Outcome breakdown
     outcomes = {}
-    for c in connections:
-        outcome = c.get("outcome", c.get("status", "unknown"))
+    for entry in entries:
+        outcome = entry.get("outcome", "unknown")
         outcomes[outcome] = outcomes.get(outcome, 0) + 1
 
     if outcomes:
@@ -140,11 +85,11 @@ def show_stats():
 
     # By message type
     by_type = {}
-    for c in connections:
-        t = c.get("type", "unknown")
+    for entry in entries:
+        t = entry.get("type", "unknown")
         by_type.setdefault(t, {"total": 0, "responded": 0})
         by_type[t]["total"] += 1
-        if c.get("outcome") in ("replied", "interview", "accepted"):
+        if entry.get("outcome") in ("replied", "interview", "accepted"):
             by_type[t]["responded"] += 1
 
     if any(v["total"] > 0 for v in by_type.values() if v.get("total")):
@@ -155,11 +100,11 @@ def show_stats():
 
     # By company size
     by_size = {}
-    for c in connections:
-        s = c.get("company_size", "unknown")
+    for entry in entries:
+        s = entry.get("company_size", "unknown")
         by_size.setdefault(s, {"total": 0, "responded": 0})
         by_size[s]["total"] += 1
-        if c.get("outcome") in ("replied", "interview", "accepted"):
+        if entry.get("outcome") in ("replied", "interview", "accepted"):
             by_size[s]["responded"] += 1
 
     if any(v["total"] > 0 for v in by_size.values()):
@@ -170,11 +115,11 @@ def show_stats():
 
     # By recipient role
     by_role = {}
-    for c in connections:
-        r = c.get("recipient_role", "unknown")
+    for entry in entries:
+        r = entry.get("recipient_role", "unknown")
         by_role.setdefault(r, {"total": 0, "responded": 0})
         by_role[r]["total"] += 1
-        if c.get("outcome") in ("replied", "interview", "accepted"):
+        if entry.get("outcome") in ("replied", "interview", "accepted"):
             by_role[r]["responded"] += 1
 
     if any(v["total"] > 0 for v in by_role.values()):
@@ -184,8 +129,8 @@ def show_stats():
             print(f"  {r:<25} {v['responded']}/{v['total']}  ({rate:.0f}% response)")
 
     # Average response time
-    times = [c["response_time_days"] for c in connections
-             if c.get("response_time_days") is not None]
+    times = [entry["response_time_days"] for entry in entries
+             if entry.get("response_time_days") is not None]
     if times:
         print(f"\nAvg response time: {sum(times)/len(times):.1f} days")
 
