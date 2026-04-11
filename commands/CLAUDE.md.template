@@ -42,7 +42,9 @@ All generated outreach content must sound human. Avoid AI writing patterns:
 |------|------|
 | Resume | {{resume_path}} |
 | LinkedIn connections | {{project_dir}}/data/connections.csv |
-| Outreach history | {{project_dir}}/data/outreach-history.json |
+| Tracking (applications + outreach + stats) | {{project_dir}}/data/tracking.json |
+| Connection matches (jobs → connections) | {{project_dir}}/data/connection-matches.json |
+| Legacy outreach history (pre-v3.0) | {{project_dir}}/data/outreach-history.json |
 | Company sizes | {{project_dir}}/data/company-sizes.json |
 | Saved jobs | {{project_dir}}/data/jobs/ |
 | All fetched jobs | {{project_dir}}/data/jobs/all-jobs.json |
@@ -50,6 +52,8 @@ All generated outreach content must sound human. Avoid AI writing patterns:
 | Search criteria | {{project_dir}}/config/search-criteria.json |
 | Talking points | {{project_dir}}/config/talking-points.json |
 | Writing style config | {{project_dir}}/config/writing-style.json |
+
+**Primary tracking file is `data/tracking.json`** (v3.0 unified schema with applications, outreach per application, unlinked_outreach, legacy_applications, and stats). Use the legacy `outreach-history.json` only for reading old data — write all new state to `tracking.json`. The local dashboard server (`scripts/local_server.py`) reads and writes `tracking.json` via its `/api/tracking*` endpoints.
 
 ---
 
@@ -60,7 +64,8 @@ All generated outreach content must sound human. Avoid AI writing patterns:
 | Cover letters | {{project_dir}}/outputs/cover-letters/ |
 | Connection requests | {{project_dir}}/outputs/connection-requests/ |
 | Emails | {{project_dir}}/outputs/emails/ |
-| Daily summaries | {{project_dir}}/outputs/daily-summaries/ |
+| Daily summary markdown | {{project_dir}}/outputs/daily-summaries/ |
+| Dashboard HTML | {{project_dir}}/dashboard/ (served at http://localhost:8777 via `python scripts/dashboard.py`) |
 | PDF exports | ~/Downloads/ |
 
 ---
@@ -167,7 +172,33 @@ cd {{project_dir}} && python3 scripts/fetch_jobs.py --keywords "Data Analyst" --
 ```
 
 **Environment variables required:**
-- `RAPIDAPI_KEY` for JSearch (free: 500 req/month)
+- `RAPIDAPI_KEY` for JSearch (free: 200 req/month)
+
+### dashboard.py / local_server.py / generate_data_js.py
+
+Local HTML dashboard infrastructure. `dashboard.py` regenerates `dashboard/data.js` (the embedded data fallback), starts the local server at `http://localhost:8777`, and auto-opens the browser. The server reads and writes `data/tracking.json` via `/api/tracking*` endpoints. Use `dashboard.py` as the daily command:
+
+```bash
+cd {{project_dir}} && python3 scripts/dashboard.py               # regen + serve + open browser
+cd {{project_dir}} && python3 scripts/dashboard.py --no-browser  # headless / SSH
+cd {{project_dir}} && python3 scripts/dashboard.py --port 9000   # custom port
+```
+
+### match_connections.py
+
+Match `data/connections.csv` against `data/jobs/all-jobs.json` and write `data/connection-matches.json`. Called automatically at the end of `fetch_jobs.py`; can also be run manually to refresh matches without re-fetching.
+
+```bash
+cd {{project_dir}} && python3 scripts/match_connections.py
+```
+
+### migrate_outreach_to_tracking.py
+
+One-shot migration from the legacy `data/outreach-history.json` format to the unified `data/tracking.json` schema. Idempotent — safe to re-run.
+
+```bash
+cd {{project_dir}} && python3 scripts/migrate_outreach_to_tracking.py
+```
 
 ---
 

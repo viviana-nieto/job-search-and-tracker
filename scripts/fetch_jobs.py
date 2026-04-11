@@ -75,7 +75,7 @@ def fetch_jsearch(keywords: list[str], locations: list[str] = None, max_jobs: in
     """
     Fetch jobs via JSearch on RapidAPI.
     Searches across LinkedIn, Indeed, Glassdoor, ZipRecruiter.
-    Free tier: 500 requests/month.
+    Free tier: 200 requests/month.
     """
     if not RAPIDAPI_KEY:
         print("Error: Please set your RAPIDAPI_KEY environment variable")
@@ -135,7 +135,7 @@ def fetch_jsearch(keywords: list[str], locations: list[str] = None, max_jobs: in
             except Exception as e:
                 print(f"  Error: {e}")
 
-    print(f"\nJSearch requests used: {requests_used} (of 500/month free)")
+    print(f"\nJSearch requests used: {requests_used} (of 200/month free)")
     return all_jobs
 
 

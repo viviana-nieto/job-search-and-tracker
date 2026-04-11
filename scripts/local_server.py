@@ -293,6 +293,14 @@ def main():
         print(f"Error: dashboard directory not found at {DASHBOARD_DIR}")
         sys.exit(1)
 
+    # Regenerate dashboard/data.js so the HTML has embedded fallback data
+    # even when someone launches this server directly (bypassing dashboard.py).
+    try:
+        from generate_data_js import generate
+        generate()
+    except Exception as e:
+        print(f"  (warning: data.js regeneration failed: {e})")
+
     server = HTTPServer(("localhost", PORT), JobSearchHandler)
     print(f"Job Search Server running at http://localhost:{PORT}")
     print(f"Dashboard: http://localhost:{PORT}/dashboard.html")
