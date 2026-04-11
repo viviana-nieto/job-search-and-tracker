@@ -1052,14 +1052,32 @@ def run_interactive_setup():
     print("    8. RapidAPI key for job fetching (optional)")
     print("    9. First fetch + open dashboard")
     print()
-    print("  We'll generate config files, CLAUDE.md, a Claude Code skill")
-    print("  file, and — if you provide a key — fetch your first batch of")
-    print("  jobs and open the dashboard at the end.")
+    print("  We'll generate config files and CLAUDE.md, and — if you provide")
+    print("  a RapidAPI key — fetch your first batch of jobs and open the")
+    print("  dashboard at the end.")
     print()
 
     if not ask_yes_no("Ready to begin?"):
         print("\n  No problem. Run this script again when you're ready.\n")
         sys.exit(0)
+
+    # ---- Eager dependency install ----
+    # Install requests + reportlab now, before collecting any info. Guarantees
+    # every later subcommand (fetch, PDF export) just works without surprising
+    # the user with an import error two days later. If install fails (externally-
+    # managed Python, network issue, etc.), warn and continue — the user can
+    # still complete config setup and install deps manually later.
+    missing = _dep_check(["requests"])
+    if missing:
+        print()
+        print("  Before we collect your info, let's install Python dependencies")
+        print("  so the rest of the wizard runs cleanly.")
+        if not _install_deps():
+            print()
+            print("  Install was skipped or failed. You can finish setup, but")
+            print("  job fetching and PDF export won't work until you run:")
+            print(f"    {sys.executable} -m pip install -r {REQUIREMENTS_FILE}")
+            print()
 
     # ---- 1. Personal Info ----
     personal = collect_personal_info()

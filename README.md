@@ -21,42 +21,56 @@ Automates job search networking by analyzing your resume, matching LinkedIn conn
 - Python 3.9+
 - Free API key: [RapidAPI (JSearch)](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch) — 200 requests/month on the free tier
 
-## Quick Start
+## Installation
+
+### Claude Code (recommended)
+
+Clone directly into Claude Code's skills directory:
 
 ```bash
-git clone https://github.com/viviana-nieto/job-search-and-tracker.git
-cd job-search-and-tracker
-python setup.py
+mkdir -p ~/.claude/skills
+git clone https://github.com/viviana-nieto/job-search-and-tracker.git ~/.claude/skills/job-search
 ```
 
-Everything the wizard does up to and including opening the dashboard runs on Python's standard library. The only two external packages — `requests` (for JSearch job fetching) and `reportlab` (for PDF export) — are installed lazily when you first opt into a job fetch. The wizard detects they're missing and prompts you before running `pip install -r requirements.txt`, so you can decline and still browse the dashboard.
-
-### Setup in Claude Code (alternative)
-
-If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you can configure this project without opening a separate terminal. Open the repo in Claude Code and type:
+That's it. `/job-search` is now available in any Claude Code session. To configure for the first time, open Claude Code anywhere and run:
 
 ```
 /job-search setup
 ```
 
-Claude Code loads the project-local `.claude/commands/job-search.md` slash command and walks you through the same questions `python setup.py` asks, writes your config files, imports your LinkedIn connections, sets your RapidAPI key, and (optionally) fetches jobs and opens the dashboard — all in the Claude Code chat. This is often smoother than the terminal wizard because you never leave the window.
+The wizard walks you through your profile, job search preferences, LinkedIn connections, and RapidAPI key, then fetches your first batch of jobs and opens the dashboard at `http://localhost:8777/dashboard.html`.
 
-After setup, the same `/job-search` slash command handles daily commands too (`fetch jobs`, `write cover letter`, `show stats`, `score messages`, etc.). One entry point for everything. See [Available Commands](#available-commands) for the full list.
+### What you get
 
-Both setup paths produce the same config files and end in the same state. Pick whichever is more convenient for you.
+- Guided wizard that collects your profile, target roles, keywords, locations, writing style, LinkedIn connections, and RapidAPI key
+- Job fetcher that pulls listings from JSearch (free tier: 200 requests/month) across LinkedIn, Indeed, Glassdoor, and ZipRecruiter
+- Tailored cover letters, resumes, and outreach messages — generated in Claude Code, applied to specific job descriptions
+- LinkedIn connection matching that surfaces who you already know at each target company
+- Local HTML dashboard at `http://localhost:8777` for browsing fetched jobs, marking applications, and tracking outreach response rates
 
-`python setup.py` walks you through everything:
+### Where your data lives
 
-1. Personal info, career context, credibility snippets
-2. Job search preferences (roles, keywords, locations)
-3. Writing style and talking points
-4. **Import your LinkedIn connections** (optional — the wizard shows you how to export them)
-5. **RapidAPI key** (optional — the wizard walks you through signup)
-6. **First fetch + dashboard launch** — fetches jobs matching your keywords and opens the dashboard in your browser
+Everything is stored under `~/.claude/skills/job-search/`:
 
-At the end of setup, your browser opens to `http://localhost:8777/dashboard.html` with your actual jobs loaded.
+- `config/` — your profile, search criteria, writing style, talking points
+- `data/tracking.json` — applications, outreach, stats (gitignored)
+- `data/connections.csv` — your LinkedIn export (gitignored)
+- `data/resume.pdf` — your resume, copied in by setup (gitignored)
+- `dashboard/` — the local HTML dashboard
+- `outputs/` — generated cover letters, resumes, and daily summaries (gitignored)
+
+To back up your job search state, just `tar` that directory. To upgrade later, `cd ~/.claude/skills/job-search && git pull`.
 
 ### Daily commands
+
+```
+/job-search fetch jobs            # fetch more jobs + refresh connection matches
+/job-search show stats            # outreach performance breakdown
+/job-search write cover letter for [Company] [Role]
+/job-search run pipeline          # full pipeline for jobs you've selected
+```
+
+Or from a terminal inside `~/.claude/skills/job-search/`:
 
 ```bash
 python scripts/dashboard.py       # open the dashboard
@@ -67,11 +81,28 @@ python setup.py --keywords        # update search keywords/locations
 python setup.py --fetch           # fetch + open dashboard without re-running setup
 ```
 
-### From Claude Code
+### Alternative: project-local clone
 
+If you'd rather keep the project in your normal projects folder, clone it anywhere and open the directory in Claude Code your usual way (CLI, VS Code extension, or desktop app):
+
+```bash
+git clone https://github.com/viviana-nieto/job-search-and-tracker.git
+cd job-search-and-tracker
 ```
-/job-search fetch jobs
+
+When you open the directory in Claude Code, the project-local `.claude/commands/job-search.md` registers `/job-search` as a slash command for that session. Same wizard, same commands — just scoped to project-local rather than global.
+
+### Terminal-only fallback (no Claude Code)
+
+If you don't use Claude Code at all, you can still configure the project from a plain terminal:
+
+```bash
+git clone https://github.com/viviana-nieto/job-search-and-tracker.git
+cd job-search-and-tracker
+python setup.py
 ```
+
+**Limitation:** the terminal path can fetch jobs, track outreach, generate stats, and produce PDFs from Markdown you've written by hand. But it **cannot generate tailored cover letters, tailored resumes, or personalized outreach messages** — those subcommands require Claude Code to do the writing. If you want the headline features, install via the Claude Code path above.
 
 ## Available Commands
 
