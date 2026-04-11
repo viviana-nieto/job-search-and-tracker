@@ -24,11 +24,12 @@ Automates job search networking by analyzing your resume, matching LinkedIn conn
 ## Quick Start
 
 ```bash
-git clone https://github.com/your-username/job-search-and-tracker.git
+git clone https://github.com/viviana-nieto/job-search-and-tracker.git
 cd job-search-and-tracker
-pip install -r requirements.txt
 python setup.py
 ```
+
+Everything the wizard does up to and including opening the dashboard runs on Python's standard library. The only two external packages — `requests` (for JSearch job fetching) and `reportlab` (for PDF export) — are installed lazily when you first opt into a job fetch. The wizard detects they're missing and prompts you before running `pip install -r requirements.txt`, so you can decline and still browse the dashboard.
 
 `python setup.py` walks you through everything:
 

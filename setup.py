@@ -973,6 +973,63 @@ def collect_api_key():
 
 
 # ---------------------------------------------------------------------------
+# Section: Lazy dependency install
+# ---------------------------------------------------------------------------
+
+REQUIREMENTS_FILE = PROJECT_DIR / "requirements.txt"
+
+
+def _dep_check(packages):
+    """Return the subset of `packages` that are not importable in this env."""
+    import importlib.util
+    return [name for name in packages if importlib.util.find_spec(name) is None]
+
+
+def _install_deps():
+    """Prompt the user, then run `pip install -r requirements.txt`.
+
+    Returns True if install succeeded, False if the user declined or pip
+    exited non-zero.
+    """
+    if not REQUIREMENTS_FILE.exists():
+        print(f"  Cannot find {REQUIREMENTS_FILE} — skipping install.")
+        return False
+
+    print()
+    print("  Fetching jobs needs two Python packages that aren't installed:")
+    print("    - requests  (for the JSearch HTTP API)")
+    print("    - reportlab (for PDF export of cover letters and resumes)")
+    print()
+    print(f"  Install command: {sys.executable} -m pip install -r {REQUIREMENTS_FILE}")
+    print()
+    if not ask_yes_no("Install them now?", default="y"):
+        print("  Skipping install. You can run it yourself later with:")
+        print(f"    {sys.executable} -m pip install -r {REQUIREMENTS_FILE}")
+        return False
+
+    import subprocess
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-r", str(REQUIREMENTS_FILE)],
+            check=False,
+        )
+    except Exception as e:
+        print(f"  pip install failed to start: {e}")
+        return False
+
+    if result.returncode != 0:
+        print()
+        print("  pip install exited with a non-zero status.")
+        print("  Common causes: externally-managed Python (use a venv), network")
+        print("  issues, or a corporate proxy. Retry manually with:")
+        print(f"    {sys.executable} -m pip install -r {REQUIREMENTS_FILE}")
+        return False
+
+    print("  Install complete.")
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Section: First fetch + launch dashboard
 # ---------------------------------------------------------------------------
 
@@ -1006,17 +1063,29 @@ def run_first_fetch_and_launch(search_criteria=None):
         print(f"  Estimated API requests: ~{estimate} (of 200/month free)")
         print()
         if ask_yes_no("Fetch jobs now?", default="y"):
-            print()
-            import subprocess
-            fetch_cmd = [sys.executable, str(PROJECT_DIR / "scripts" / "fetch_jobs.py")]
-            if keywords:
-                fetch_cmd += ["--keywords", *keywords]
-            if locations:
-                fetch_cmd += ["--locations", *locations]
-            try:
-                subprocess.run(fetch_cmd, check=False)
-            except Exception as e:
-                print(f"  Fetch failed: {e}")
+            # Lazy dep install: only prompt when the user has actually opted
+            # into a fetch. Everything up to this point runs on stdlib only.
+            missing = _dep_check(["requests"])
+            if missing:
+                if _install_deps():
+                    missing = _dep_check(["requests"])
+
+            if missing:
+                print()
+                print("  Skipping fetch (requests not installed).")
+                print("  You can fetch later with: python setup.py --fetch")
+            else:
+                print()
+                import subprocess
+                fetch_cmd = [sys.executable, str(PROJECT_DIR / "scripts" / "fetch_jobs.py")]
+                if keywords:
+                    fetch_cmd += ["--keywords", *keywords]
+                if locations:
+                    fetch_cmd += ["--locations", *locations]
+                try:
+                    subprocess.run(fetch_cmd, check=False)
+                except Exception as e:
+                    print(f"  Fetch failed: {e}")
         else:
             print("  Skipping fetch. Run later with: python scripts/fetch_jobs.py")
     elif not api_key:
