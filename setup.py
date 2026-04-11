@@ -27,8 +27,9 @@ CLAUDE_MD_PATH = PROJECT_DIR / "CLAUDE.md"
 CLAUDE_MD_TEMPLATE = COMMANDS_DIR / "CLAUDE.md.template"
 
 # Legacy user-global skill file. Used to be generated here; now we ship
-# .claude/commands/job-search-agent.md as a project-local slash command
-# instead. Keep the path around only to prompt for cleanup on upgrade.
+# .claude/commands/job-search.md as a project-local slash command instead.
+# Keep the path around only to prompt for cleanup on upgrade — the legacy
+# filename was job-search-agent.md, so the constant does not change.
 LEGACY_SKILL_FILE = Path.home() / ".claude" / "commands" / "job-search-agent.md"
 
 # ---------------------------------------------------------------------------
@@ -690,7 +691,7 @@ def cleanup_legacy_user_skill():
     """Remove the user-global ~/.claude/commands/job-search-agent.md file if it
     still exists from a pre-refactor setup.py run.
 
-    The skill is now project-local at .claude/commands/job-search-agent.md,
+    The skill is now project-local at .claude/commands/job-search.md,
     which ships with the repo. Keeping the old user-global file around causes
     a name collision with the project-local version. We prompt before deleting
     because it's destructive.
@@ -702,8 +703,8 @@ def cleanup_legacy_user_skill():
     print("  Detected a legacy user-global skill file:")
     print(f"    {LEGACY_SKILL_FILE}")
     print()
-    print("  This project now ships the /job-search-agent slash command as a")
-    print("  project-local file at .claude/commands/job-search-agent.md that")
+    print("  This project now ships the /job-search slash command as a")
+    print("  project-local file at .claude/commands/job-search.md that")
     print("  travels with the repo. Keeping the old user-global file around")
     print("  causes a name collision with the new project-local version.")
     print()
@@ -717,7 +718,7 @@ def cleanup_legacy_user_skill():
             print(f"    rm {LEGACY_SKILL_FILE}")
     else:
         print("  Leaving the legacy file in place. You may see unexpected")
-        print("  behavior from /job-search-agent until you delete it manually:")
+        print("  behavior from /job-search until you delete it manually:")
         print(f"    rm {LEGACY_SKILL_FILE}")
 
 
@@ -1159,8 +1160,8 @@ def run_interactive_setup():
     print(f"  Created: {CLAUDE_MD_PATH}")
 
     # ---- Legacy skill file cleanup (upgrade path) ----
-    # The /job-search-agent slash command now lives at
-    # .claude/commands/job-search-agent.md and ships with the repo, so we
+    # The /job-search slash command now lives at
+    # .claude/commands/job-search.md and ships with the repo, so we
     # no longer generate ~/.claude/commands/job-search-agent.md. If an old
     # copy is sitting on disk from a prior setup.py run, prompt to remove it
     # to avoid a name collision with the project-local version.
@@ -1196,8 +1197,8 @@ def run_interactive_setup():
     print(f"    - {CONFIG_DIR / 'writing-style.json'}")
     print(f"    - {CLAUDE_MD_PATH}")
     print()
-    print("  The /job-search-agent slash command is project-local at")
-    print(f"    {PROJECT_DIR / '.claude' / 'commands' / 'job-search-agent.md'}")
+    print("  The /job-search slash command is project-local at")
+    print(f"    {PROJECT_DIR / '.claude' / 'commands' / 'job-search.md'}")
     print("  It's available in Claude Code the moment this repo is open.")
 
     # ---- 9. First fetch + launch dashboard ----
@@ -1211,7 +1212,7 @@ def run_interactive_setup():
     print(f"    python setup.py --connections      # re-import LinkedIn connections")
     print(f"    python setup.py --api-key          # update your RapidAPI key")
     print()
-    print("  Or in Claude Code: /job-search-agent fetch jobs")
+    print("  Or in Claude Code: /job-search fetch jobs")
     print()
 
 
@@ -1254,8 +1255,8 @@ def run_from_config():
 
     print()
     print("  Done! CLAUDE.md regenerated from config.")
-    print("  The /job-search-agent slash command is project-local and does")
-    print("  not need regeneration — edit .claude/commands/job-search-agent.md")
+    print("  The /job-search slash command is project-local and does")
+    print("  not need regeneration — edit .claude/commands/job-search.md")
     print("  directly if you need to customize it.")
     print()
 

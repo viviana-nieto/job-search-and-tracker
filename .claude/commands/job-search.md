@@ -1,4 +1,4 @@
-# /job-search-agent
+# /job-search
 
 Multi-function slash command that runs every job-search workflow for this project: first-time setup, fetching jobs, generating cover letters and outreach messages, tracking applications, and reporting on outreach performance. Dispatches by subcommand.
 
@@ -10,8 +10,8 @@ You are running this skill inside Claude Code, with access to the project at the
 
 **Parse the invocation:**
 
-- `/job-search-agent` with no argument → show the usage block below and stop.
-- `/job-search-agent <subcommand> [args]` → find the matching subcommand section and follow its instructions.
+- `/job-search` with no argument → show the usage block below and stop.
+- `/job-search <subcommand> [args]` → find the matching subcommand section and follow its instructions.
 
 If the user's phrasing doesn't exactly match a known subcommand name, pick the closest one and confirm with the user before executing.
 
@@ -33,7 +33,7 @@ Files you'll read, depending on the subcommand:
 | `data/connections.csv` | LinkedIn connections export |
 | `data/jobs/all-jobs.json` | Master job repository |
 
-**Before any non-setup subcommand**, check that `config/profile.json` exists. If it doesn't, the user hasn't run setup yet — direct them to `/job-search-agent setup` and stop.
+**Before any non-setup subcommand**, check that `config/profile.json` exists. If it doesn't, the user hasn't run setup yet — direct them to `/job-search setup` and stop.
 
 **Always use the current working directory** as the project root. Never hardcode a specific path.
 
@@ -42,24 +42,24 @@ Files you'll read, depending on the subcommand:
 ## Usage
 
 ```
-/job-search-agent                            # show this help
-/job-search-agent setup                      # first-run configuration wizard
+/job-search                            # show this help
+/job-search setup                      # first-run configuration wizard
 
-/job-search-agent fetch jobs                 # fetch jobs from JSearch
-/job-search-agent run pipeline               # full pipeline: fetch + generate materials
-/job-search-agent write cover letter for [company] [role]
-/job-search-agent write resume for [company] [role]
-/job-search-agent write connection for [name] at [company]
-/job-search-agent write email to [name] about [role]
-/job-search-agent draft gmail to [email]     # create a Gmail draft via MCP
-/job-search-agent log outreach to [name] at [company]
-/job-search-agent update outreach for [name] at [company] [status]
-/job-search-agent show stats                 # outreach performance report
-/job-search-agent score messages             # analyze message patterns
-/job-search-agent classify company [Company] # startup vs large classification
-/job-search-agent save job [description]     # save a job posting
-/job-search-agent list jobs                  # list saved jobs
-/job-search-agent match connections for [job]
+/job-search fetch jobs                 # fetch jobs from JSearch
+/job-search run pipeline               # full pipeline: fetch + generate materials
+/job-search write cover letter for [company] [role]
+/job-search write resume for [company] [role]
+/job-search write connection for [name] at [company]
+/job-search write email to [name] about [role]
+/job-search draft gmail to [email]     # create a Gmail draft via MCP
+/job-search log outreach to [name] at [company]
+/job-search update outreach for [name] at [company] [status]
+/job-search show stats                 # outreach performance report
+/job-search score messages             # analyze message patterns
+/job-search classify company [Company] # startup vs large classification
+/job-search save job [description]     # save a job posting
+/job-search list jobs                  # list saved jobs
+/job-search match connections for [job]
 ```
 
 ---
@@ -282,10 +282,10 @@ Summarize what was created:
 
 Tell them the daily commands:
 
-- `/job-search-agent fetch jobs` — fetch more jobs
-- `/job-search-agent show stats` — see outreach performance
+- `/job-search fetch jobs` — fetch more jobs
+- `/job-search show stats` — see outreach performance
 - `python scripts/dashboard.py` — open the dashboard
-- `/job-search-agent setup` — re-run the wizard
+- `/job-search setup` — re-run the wizard
 
 ---
 
@@ -301,7 +301,7 @@ Fetch jobs from JSearch via RapidAPI. Defaults to the keywords and locations in 
 ## Before fetching
 
 1. Read `config/search-criteria.json` to get default keywords and locations.
-2. Check that `$RAPIDAPI_KEY` is set. If not, direct the user to `/job-search-agent setup` (step 8) or have them set it manually.
+2. Check that `$RAPIDAPI_KEY` is set. If not, direct the user to `/job-search setup` (step 8) or have them set it manually.
 3. Check that `requests` is installed. If not, offer to run `python -m pip install -r requirements.txt`.
 
 ## Run the fetch
@@ -341,7 +341,7 @@ Generate application materials for each job the user has selected in the dashboa
    - Write a **tailored cover letter** using `templates/{language}/cover-letter.md`. Save as `cover-letter.md` and generate a PDF.
 4. Generate `outputs/YYYY-MM-DD/summary.md` with links to all materials.
 5. Present everything to the user for review.
-6. After approval, log each outreach via `/job-search-agent log outreach`.
+6. After approval, log each outreach via `/job-search log outreach`.
 
 **Output folder structure:**
 
@@ -418,7 +418,7 @@ Generate a LinkedIn connection request (max 300 chars) personalized to a specifi
 
 5. Verify character count is under 300. If over, trim pleasantries first, then shorten credibility, then simplify the CTA.
 6. Save to `outputs/connection-requests/[name]-[company].md`.
-7. Ask the user if they want to log it via `/job-search-agent log outreach`.
+7. Ask the user if they want to log it via `/job-search log outreach`.
 
 For a connection request without a specific job, use a broader approach focused on the company and mutual interest.
 
@@ -611,9 +611,9 @@ All generated content must pass a humanizer check before you present it to the u
 
 ## Error handling
 
-1. **Missing config files** (`config/profile.json` does not exist) → direct the user to run `/job-search-agent setup`.
-2. **Missing `$RAPIDAPI_KEY`** → direct to `/job-search-agent setup` (step 8) or `python setup.py --api-key`.
-3. **Missing `data/connections.csv`** → run `/job-search-agent setup` (step 7) or `python setup.py --connections`.
+1. **Missing config files** (`config/profile.json` does not exist) → direct the user to run `/job-search setup`.
+2. **Missing `$RAPIDAPI_KEY`** → direct to `/job-search setup` (step 8) or `python setup.py --api-key`.
+3. **Missing `data/connections.csv`** → run `/job-search setup` (step 7) or `python setup.py --connections`.
 4. **Missing `data/tracking.json`** → copy from the template: `cp data/tracking-template.json data/tracking.json`. The local server also does this automatically on startup.
 5. **Legacy `data/outreach-history.json` only** → `scripts/tracking.py` auto-migrates on first read. No manual action needed.
 6. **Connection request exceeds 300 chars** → trim pleasantries first, then shorten credibility, then simplify the CTA.
