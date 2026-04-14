@@ -12,12 +12,13 @@ Run:
 """
 
 import json
+import os
 import sys
 from datetime import date, datetime, timezone
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).parent.parent
+PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", Path(__file__).parent.parent))
 DASHBOARD_DIR = PROJECT_DIR / "dashboard"
 ALL_JOBS_FILE = PROJECT_DIR / "data" / "jobs" / "all-jobs.json"
 PORT = 8777

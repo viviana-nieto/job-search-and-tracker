@@ -8,7 +8,7 @@ import re
 import sys
 from datetime import date
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.environ.get("JOB_SEARCH_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 JOBS_DIR = os.path.join(PROJECT_DIR, "data", "jobs")
 
 

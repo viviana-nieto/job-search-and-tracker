@@ -47,9 +47,10 @@ RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY", "")
 
 DEFAULT_LOCATION = DEFAULT_LOCATIONS[0] if DEFAULT_LOCATIONS else "San Francisco Bay Area"
 
-# Output directory
+# Output directory — JOB_SEARCH_DIR overrides for workspace separation
 SCRIPT_DIR = Path(__file__).parent
-DATA_DIR = SCRIPT_DIR.parent / "data" / "jobs"
+_PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", SCRIPT_DIR.parent))
+DATA_DIR = _PROJECT_DIR / "data" / "jobs"
 
 
 # --- Salary Extraction ---

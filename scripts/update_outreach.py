@@ -10,7 +10,7 @@ import os
 import sys
 from datetime import date
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.environ.get("JOB_SEARCH_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Same-directory imports (matches the existing pattern for company_classifier).
 sys.path.insert(0, os.path.join(PROJECT_DIR, "scripts"))

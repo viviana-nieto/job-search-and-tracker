@@ -37,6 +37,23 @@ Files you'll read, depending on the subcommand:
 
 **Always use the current working directory** as the project root. Never hardcode a specific path.
 
+## Workspace resolution
+
+Before running any Python script, determine the workspace directory:
+
+1. Check if a `.workspace` file exists in the project root (or in `~/.claude/skills/job-search/` for global installs). If it exists, read its single line — that's the workspace path where the user's data lives.
+2. If no `.workspace` file, use the current working directory as the workspace.
+
+**Every Bash call that runs a Python script must prepend the workspace path:**
+
+```
+JOB_SEARCH_DIR="/path/to/workspace" python scripts/fetch_jobs.py ...
+```
+
+All Python scripts respect `JOB_SEARCH_DIR` — they resolve config/, data/, outputs/, and dashboard/ relative to it. If the env var is not set, scripts fall back to their own parent directory (the traditional project-local model).
+
+For project-local installs (the user cloned into a normal directory and opened it in Claude Code), `JOB_SEARCH_DIR` equals the cwd and the override is a no-op. Only global installs (skill directory != data directory) need the explicit override.
+
 ---
 
 ## Usage
@@ -81,6 +98,50 @@ Read these files so you know the exact JSON shapes you need to produce:
 3. **`config/writing-style.sample.json`** — sign-offs, PM phrases, writing rules (per-language)
 4. **`config/talking-points.sample.json`** — industry-organized talking points
 5. **`data/tracking-template.json`** — the v3.0 tracking schema template
+
+## Step 0 — Workspace location
+
+Ask the user:
+
+> Where do you want to keep your job search data? This is where your config, resume, tracking data, and generated materials will live.
+>
+> Default: ~/job-search
+
+Create the directory and its subdirectories via Bash:
+
+```
+mkdir -p ~/job-search/{config,data/jobs,outputs,dashboard}
+```
+
+Copy template and starter files from the skill installation into the workspace:
+
+```
+cp data/tracking-template.json ~/job-search/data/
+cp data/connections-template.csv ~/job-search/data/
+cp data/company-ats.json ~/job-search/data/
+cp data/jobs/sample-job.json ~/job-search/data/jobs/
+cp config/*.sample.json ~/job-search/config/
+cp config/humanizer-rules.json ~/job-search/config/
+cp dashboard/*.html dashboard/favicon.png ~/job-search/dashboard/
+```
+
+(Substitute the user's chosen path for `~/job-search` in the commands above.)
+
+Save the workspace path so future commands know where to find the data:
+
+```
+echo "/Users/username/job-search" > .workspace
+```
+
+(`.workspace` goes in the current project root — that's either `~/.claude/skills/job-search/` for global installs or the project-local clone directory.)
+
+For **project-local installs** (user cloned into a normal directory and opened it in Claude Code), skip this step entirely — the project directory IS the workspace, no `.workspace` file is needed, and no files need copying.
+
+From this point on, every Bash call in this setup that runs a Python script must prepend:
+
+```
+JOB_SEARCH_DIR="/chosen/path" python scripts/...
+```
 
 ## Step 1 — Resume
 

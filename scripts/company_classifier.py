@@ -6,7 +6,7 @@ import json
 import os
 import sys
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.environ.get("JOB_SEARCH_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SIZES_FILE = os.path.join(PROJECT_DIR, "data", "company-sizes.json")
 CRITERIA_FILE = os.path.join(PROJECT_DIR, "data", "search-criteria.json")
 

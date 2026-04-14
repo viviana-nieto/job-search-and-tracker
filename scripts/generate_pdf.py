@@ -21,7 +21,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config_loader import get_contact, get_name, load_profile, get_filename_prefix
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.environ.get("JOB_SEARCH_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DOWNLOADS_DIR = os.path.expanduser("~/Downloads")
 
 # Colors

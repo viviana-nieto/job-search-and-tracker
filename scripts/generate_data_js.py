@@ -11,7 +11,7 @@ import os
 import re
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).parent.parent
+PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", Path(__file__).parent.parent))
 TRACKING_FILE = PROJECT_DIR / "data" / "tracking.json"
 ALL_JOBS_FILE = PROJECT_DIR / "data" / "jobs" / "all-jobs.json"
 MATCHES_FILE = PROJECT_DIR / "data" / "connection-matches.json"

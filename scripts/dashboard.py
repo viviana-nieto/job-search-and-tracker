@@ -12,13 +12,14 @@ Run:
 """
 
 import argparse
+import os
 import sys
 import threading
 import time
 import webbrowser
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).parent.parent
+PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", Path(__file__).parent.parent))
 sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 
 

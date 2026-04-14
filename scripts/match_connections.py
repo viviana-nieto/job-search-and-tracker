@@ -14,7 +14,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).parent.parent
+PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", Path(__file__).parent.parent))
 CONNECTIONS_FILE = PROJECT_DIR / "data" / "connections.csv"
 ALL_JOBS_FILE = PROJECT_DIR / "data" / "jobs" / "all-jobs.json"
 MATCHES_FILE = PROJECT_DIR / "data" / "connection-matches.json"

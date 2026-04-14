@@ -20,12 +20,13 @@ Key design notes:
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Iterator, Optional, Tuple
 
-PROJECT_DIR = Path(__file__).parent.parent
+PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", Path(__file__).parent.parent))
 TRACKING_FILE = PROJECT_DIR / "data" / "tracking.json"
 TRACKING_TEMPLATE = PROJECT_DIR / "data" / "tracking-template.json"
 LEGACY_FILE = PROJECT_DIR / "data" / "outreach-history.json"

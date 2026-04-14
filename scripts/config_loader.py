@@ -6,7 +6,7 @@ import os
 import re
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).parent.parent
+PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", Path(__file__).parent.parent))
 CONFIG_DIR = PROJECT_DIR / "config"
 
 

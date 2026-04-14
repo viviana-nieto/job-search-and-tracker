@@ -12,11 +12,12 @@ Usage:
 """
 
 import json
+import os
 import sys
 from datetime import date
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).parent.parent
+PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", Path(__file__).parent.parent))
 LEGACY_FILE = PROJECT_DIR / "data" / "outreach-history.json"
 TRACKING_FILE = PROJECT_DIR / "data" / "tracking.json"
 TRACKING_TEMPLATE = PROJECT_DIR / "data" / "tracking-template.json"

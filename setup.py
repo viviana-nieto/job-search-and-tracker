@@ -20,7 +20,7 @@ from pathlib import Path
 # Paths
 # ---------------------------------------------------------------------------
 
-PROJECT_DIR = Path(__file__).parent.resolve()
+PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", Path(__file__).parent.resolve()))
 CONFIG_DIR = PROJECT_DIR / "config"
 COMMANDS_DIR = PROJECT_DIR / "commands"
 CLAUDE_MD_PATH = PROJECT_DIR / "CLAUDE.md"

@@ -29,7 +29,7 @@ except ImportError:
     print("Install with: pip install -r requirements.txt")
     sys.exit(1)
 
-PROJECT_DIR = Path(__file__).parent.parent
+PROJECT_DIR = Path(os.environ.get("JOB_SEARCH_DIR", Path(__file__).parent.parent))
 COMPANY_ATS_FILE = PROJECT_DIR / "data" / "company-ats.json"
 ALL_JOBS_FILE = PROJECT_DIR / "data" / "jobs" / "all-jobs.json"
 
