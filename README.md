@@ -258,12 +258,17 @@ python scripts/company_classifier.py "Notion" --add startup
 
 To match your existing connections with target companies:
 
-1. Go to [LinkedIn Settings](https://www.linkedin.com/mypreferences/d/download-my-data)
-2. Select **Connections** under "Get a copy of your data"
-3. Click **Request archive**
-4. Wait for the email (usually a few minutes)
-5. Download and extract the archive
-6. Copy `Connections.csv` to `data/connections.csv`
+1. Go to [linkedin.com/mypreferences/d/download-my-data](https://www.linkedin.com/mypreferences/d/download-my-data)
+2. Select **"Download larger data archive"** (the first radio button — it includes connections, contacts, and account history)
+3. Click **"Request archive"**
+4. Wait for the email (LinkedIn says ~24 hours, sometimes faster)
+5. Download the ZIP file from the email (named like `Basic_LinkedInDataExport_MM-DD-YYYY.zip`)
+6. Extract it — you'll see several CSV files inside
+7. Find **`Connections.csv`** and copy it to `data/connections.csv`
+
+![LinkedIn Download Data page](docs/images/linkedin-download-data.png)
+
+![Connections.csv in the exported ZIP](docs/images/linkedin-connections-file.png)
 
 The CSV should have columns: `First Name`, `Last Name`, `URL`, `Email Address`, `Company`, `Position`, `Connected On`. See `data/connections-template.csv` for the expected format.
 
@@ -273,18 +278,26 @@ The CSV should have columns: `First Name`, `Last Name`, `URL`, `Email Address`, 
 
 JSearch aggregates listings from LinkedIn, Indeed, Glassdoor, and ZipRecruiter in a single API call. Free tier gives you **200 requests/month**.
 
-The easiest path is `python setup.py --api-key`, which walks you through RapidAPI signup, subscribing to the free plan, pasting your key, and appending it to your shell profile. Or do it manually:
+The easiest path is `/job-search setup` in Claude Code (or `python setup.py --api-key` in a terminal), which walks you through signup step by step. Or do it manually:
 
-1. Go to [https://rapidapi.com/](https://rapidapi.com/) and create a free account (you can sign up with Google or GitHub)
-2. Go to the JSearch API page: [https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch)
+1. Go to [rapidapi.com](https://rapidapi.com/) and create a free account (you can sign up with Google or GitHub — no credit card needed)
+2. Go to the JSearch API page: [rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch)
 3. Click **"Subscribe to Test"** and select the **Basic (Free)** plan (200 requests/month, no credit card required)
-4. After subscribing, you'll see the API playground. Your API key is shown in the **X-RapidAPI-Key** header field. Copy it.
-5. Set the environment variable:
+4. Click **"Console"** in the top navigation bar (next to "API Marketplace")
+5. Click on **"default-application"**
+6. Click the **"Authorizations"** tab
+7. Under **"Authorization Keys"**, click the **copy icon** next to the masked Application Key
+
+![RapidAPI Console — find your application](docs/images/rapidapi-console.png)
+
+![RapidAPI API Key — copy from Authorizations tab](docs/images/rapidapi-api-key.png)
+
+8. Set the environment variable:
    ```bash
    # Add to your ~/.zshrc or ~/.bashrc for persistence:
    export RAPIDAPI_KEY=your_key_here
    ```
-6. Verify it works:
+9. Verify it works:
    ```bash
    cd /path/to/job-search-and-tracker
    python3 scripts/fetch_jobs.py --keywords "Software Engineer" --locations "Remote"

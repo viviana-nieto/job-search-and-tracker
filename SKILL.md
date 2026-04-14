@@ -50,6 +50,16 @@ Files you'll read, depending on the subcommand:
 
 **Always use the current working directory** as the project root. Never hardcode a specific path.
 
+## Python binary
+
+At the start of any subcommand that runs a Python script, determine the correct binary if you haven't already in this session:
+
+```
+python3 --version 2>/dev/null && PYTHON=python3 || PYTHON=python
+```
+
+Use the resolved binary name for all subsequent calls. This handles systems with `python3` only, `python` only, or both. When writing Bash commands in the instructions below, `python` means "the detected Python binary."
+
 ## Workspace resolution
 
 Before running any Python script, determine the workspace directory:
@@ -289,7 +299,64 @@ Ask:
 
 ## Step 5 — Write config files
 
-Use the **Write** tool to create 4 JSON files. Read `config/*.sample.json` for the exact shapes. Never use Bash `echo` redirection for JSON — always use Write.
+Use the **Write** tool to create 4 JSON files. Read `config/*.sample.json` for the structure, but the authoritative field names are below. Never use Bash `echo` redirection for JSON — always use Write.
+
+**profile.json required fields:**
+
+| Field | Type | Source |
+|---|---|---|
+| `name` | string | resume / Step 2 |
+| `title` | string | resume headline |
+| `filename_prefix` | string | "LastName_FirstName" (strip non-alphanumerics) |
+| `contact.email` | string | resume |
+| `contact.phone` | string | resume |
+| `contact.location` | string | resume |
+| `contact.website` | string | resume / LinkedIn URL |
+| `career.years_of_experience` | string | calculated from resume dates |
+| `career.key_roles[]` | array of `{company, title, achievement}` | resume |
+| `career.skills[]` | array of strings | resume |
+| `career.education` | string | resume |
+| `credibility.short` | string | 1 sentence, generated from resume |
+| `credibility.medium` | string | 2-3 sentences |
+| `credibility.long` | string | full paragraph |
+| `quantified_impact` | string | best metric from resume |
+| `languages[]` | array of strings | e.g. `["en"]` |
+| `default_language` | string | e.g. `"en"` |
+| `resume_path` | string | absolute path to the resume file |
+
+**search-criteria.json required fields:**
+
+| Field | Type |
+|---|---|
+| `roles.target[]` | array of strings |
+| `roles.exclude_titles[]` | array of strings |
+| `companies.target[]` | array of strings |
+| `companies.exclude[]` | array of strings |
+| `industries.target[]` | array of strings |
+| `locations.preferred[]` | array of strings |
+| `locations.acceptable[]` | array of strings |
+| `search_queries.high_priority[]` | array of strings |
+| `search_queries.medium_priority[]` | array of strings |
+| `scoring_weights.title_match` | integer (1-10) |
+| `scoring_weights.industry_match` | integer |
+| `scoring_weights.company_match` | integer |
+| `scoring_weights.location_match` | integer |
+| `scoring_weights.seniority_match` | integer |
+
+**writing-style.json required fields:**
+
+| Field | Type |
+|---|---|
+| `sign_offs.{lang}.linkedin` | string |
+| `sign_offs.{lang}.email` | string |
+| `sign_offs.{lang}.formal` | string |
+| `pm_phrases.startup` | string |
+| `pm_phrases.large` | string |
+| `pm_phrases.unknown` | string |
+| `writing_rules[]` | array of strings |
+| `humanizer.enabled` | boolean |
+| `humanizer.rules_file` | string (path) |
+| `humanizer.self_check` | boolean |
 
 1. `config/profile.json` — from Steps 1-2. Include `filename_prefix` = `LastName_FirstName` (strip non-alphanumerics, see `setup.py:make_filename_prefix`). Include `resume_path`, `languages`, `default_language`.
 2. `config/search-criteria.json` — from Step 3 + auto-inferred fields.
@@ -314,23 +381,75 @@ Non-interactive. Reads the config JSONs and generates `CLAUDE.md` at the project
 
 ## Step 7 — LinkedIn Connections (optional)
 
-> Have you exported your LinkedIn connections?
+> Have you exported your LinkedIn connections? This lets the dashboard show which of your connections work at each target company.
 
-**If no:** show the export instructions (open https://www.linkedin.com/mypreferences/d/download-my-data, select Connections, request archive, wait for email). Offer to pause or skip.
+**If no:** walk them through the export step by step:
 
-**If yes:** ask for path, validate, copy to `data/connections.csv`.
+> Here's how to export your LinkedIn connections (takes about 24 hours for LinkedIn to prepare the file):
+>
+> 1. Open **https://linkedin.com/mypreferences/d/download-my-data**
+> 2. On the "Download my data" page, select **"Download larger data archive"** (the first radio button — it includes connections, contacts, and account history)
+> 3. Click the **"Request archive"** button
+> 4. LinkedIn will email you when the archive is ready (usually within 24 hours)
+> 5. Download the ZIP file from the email (it'll be named something like `Basic_LinkedInDataExport_MM-DD-YYYY.zip`)
+> 6. Extract/unzip it — you'll see several CSV files inside
+> 7. Find **`Connections.csv`** in the extracted files — that's the one we need
+>
+> Want to pause setup here and come back once you have the file? Or skip this step for now?
 
-**If skipped:** tell them `python setup.py --connections` later.
+**If yes (they already have the file):** ask for the path to `Connections.csv`. Common locations:
+- `~/Downloads/Connections.csv`
+- `~/Downloads/Basic_LinkedInDataExport_*/Connections.csv`
 
-## Step 8 — RapidAPI Key (optional)
+Validate the file exists via Bash. Copy it to the workspace:
 
-> The tool already fetches jobs from company career pages (free, no signup). Want to ALSO search across LinkedIn, Indeed, Glassdoor, and ZipRecruiter? That requires a free RapidAPI key (200 requests/month, no credit card).
+```
+cp "$SRC_PATH" data/connections.csv
+```
+
+**If skipped:** tell them they can come back later with `python setup.py --connections` or by re-running `/job-search setup`.
+
+## Step 8 — RapidAPI Key
+
+**Context-aware framing:** check how many companies were found during the ATS probe in Step 3.
+
+- If **ATS found companies** → position this as optional: "The tool already fetches jobs from your target companies' career pages. Want to ALSO search across LinkedIn, Indeed, Glassdoor, and ZipRecruiter?"
+- If **ATS found ZERO companies** (none of their targets use Greenhouse/Lever/Ashby) → position this as needed: "None of your target companies use a supported career page API, so JSearch is how we'll find jobs for you. Let's set up the free API key — it takes about 2 minutes."
 
 Check if already set: `echo "${RAPIDAPI_KEY:-MISSING}"`
 
-If missing, walk through signup (same 4-step guide as before). After pasting the key, offer to persist to shell rc. Hold key in chat state for Step 9.
+If it's already set, confirm and skip to Step 9.
 
-**Framing matters:** position this as an optional upgrade, not a required step. ATS fetching already works without it.
+If missing, walk through signup step by step:
+
+> 1. Open **https://rapidapi.com** and create a free account (you can sign up with Google or GitHub — no credit card needed)
+> 2. Go to the JSearch API page: **https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch**
+> 3. Click **"Subscribe to Test"** and select the **Basic (Free)** plan — this gives you 200 requests/month at no cost
+> 4. Now get your API key: click **"Console"** in the top navigation bar (next to "API Marketplace")
+> 5. You'll see an **Applications** page with a **"default-application"** card — click on it
+> 6. On the application detail page, click the **"Authorizations"** tab
+> 7. Under **"Authorization Keys"**, you'll see a row labeled **"Application Key"** with a masked key (dots). Click the **copy icon** (clipboard icon) on the right side to copy your key
+>
+> Paste your key here when you have it.
+
+After they paste the key, validate it's non-empty and has no whitespace.
+
+Then offer to persist it to their shell profile:
+
+> Want me to add this to your shell profile so it's set automatically in new terminals?
+
+If yes:
+- Detect shell from `$SHELL` (`zsh` → `~/.zshrc`, `bash` → `~/.bashrc`; ambiguous → ask)
+- Grep for an existing `export RAPIDAPI_KEY` line; if found, ask before replacing
+- Append via Bash:
+  ```
+  echo '' >> ~/.zshrc
+  echo '# Job Search Agent (JSearch)' >> ~/.zshrc
+  echo 'export RAPIDAPI_KEY="$PASTED_KEY"' >> ~/.zshrc
+  ```
+- Tell them to `source ~/.zshrc` or open a new terminal
+
+**Important:** each Bash call runs in its own subshell. Hold the pasted key in chat state and pass it inline to the fetch in Step 9: `RAPIDAPI_KEY="..." python scripts/fetch_jobs.py ...`
 
 ## Step 9 — Fetch + dashboard
 

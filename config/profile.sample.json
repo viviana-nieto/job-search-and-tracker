@@ -8,37 +8,31 @@
     "location": "San Francisco Bay Area",
     "website": "https://janedoe.com"
   },
-  "career_arc": [
-    {
-      "company": "TechCorp",
-      "role": "Senior PM",
-      "years": "2022-2025",
-      "achievement": "Led AI product launch reaching 1M users"
-    },
-    {
-      "company": "StartupCo",
-      "role": "Product Manager",
-      "years": "2019-2022",
-      "achievement": "Built payment platform processing $200M annually"
-    },
-    {
-      "company": "BigBank",
-      "role": "Associate PM",
-      "years": "2017-2019",
-      "achievement": "Redesigned onboarding flow, increasing conversion 40%"
-    }
-  ],
-  "skills": [
-    "SQL",
-    "Python",
-    "Product Strategy",
-    "A/B Testing",
-    "Data Analysis",
-    "User Research",
-    "Roadmap Planning",
-    "Cross-functional Leadership"
-  ],
-  "education": "Stanford University, MBA | UC Berkeley, BS Computer Science",
+  "career": {
+    "years_of_experience": "8",
+    "key_roles": [
+      {
+        "company": "TechCorp",
+        "title": "Senior PM",
+        "achievement": "Led AI product launch reaching 1M users"
+      },
+      {
+        "company": "StartupCo",
+        "title": "Product Manager",
+        "achievement": "Built payment platform processing $200M annually"
+      },
+      {
+        "company": "BigBank",
+        "title": "Associate PM",
+        "achievement": "Redesigned onboarding flow, increasing conversion 40%"
+      }
+    ],
+    "skills": [
+      "SQL", "Python", "Product Strategy", "A/B Testing",
+      "Data Analysis", "User Research", "Cross-functional Leadership"
+    ],
+    "education": "Stanford University, MBA | UC Berkeley, BS Computer Science"
+  },
   "credibility": {
     "short": "8 years building AI and fintech products at scale",
     "medium": "PM with 8 years of experience building AI and fintech products, from 0-to-1 launches to scaling platforms to millions of users",

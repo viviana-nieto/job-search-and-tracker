@@ -1,73 +1,28 @@
 {
-  "roles": [
-    "Product Manager",
-    "Senior Product Manager",
-    "Staff Product Manager",
-    "Director of Product"
-  ],
+  "roles": {
+    "target": ["Product Manager", "Senior Product Manager", "Director of Product"],
+    "exclude_titles": ["Junior", "Associate", "Intern", "Entry Level"]
+  },
+  "companies": {
+    "target": ["Stripe", "OpenAI", "Plaid"],
+    "exclude": []
+  },
   "industries": {
-    "primary": [
-      {
-        "name": "AI/ML",
-        "companies": ["OpenAI", "Anthropic", "Google DeepMind", "Cohere", "Mistral"]
-      },
-      {
-        "name": "Fintech",
-        "companies": ["Stripe", "Plaid", "Square", "Brex", "Ramp"]
-      }
-    ],
-    "secondary": [
-      {
-        "name": "Big Tech AI",
-        "companies": ["Google", "Meta", "Apple", "Amazon", "Microsoft"]
-      },
-      {
-        "name": "Enterprise SaaS",
-        "companies": ["Salesforce", "Datadog", "Snowflake", "Figma", "Notion"]
-      },
-      {
-        "name": "Health Tech",
-        "companies": ["Oscar Health", "Ro", "Noom", "Hims & Hers"]
-      }
-    ]
+    "target": ["AI/ML", "SaaS", "Fintech", "Health Tech"]
   },
   "locations": {
-    "preferred": [
-      "San Francisco Bay Area",
-      "New York City"
-    ],
-    "acceptable": [
-      "Remote",
-      "Seattle",
-      "Los Angeles"
-    ]
+    "preferred": ["San Francisco Bay Area", "Remote"],
+    "acceptable": []
   },
   "search_queries": {
-    "high_priority": [
-      "Product Manager AI",
-      "Senior Product Manager ML",
-      "Product Manager Fintech"
-    ],
-    "medium_priority": [
-      "Product Manager SaaS",
-      "Product Manager Payments",
-      "Product Manager Growth"
-    ],
-    "low_priority": [
-      "Technical Product Manager",
-      "Product Manager Data"
-    ]
+    "high_priority": ["Product Manager", "Senior Product Manager"],
+    "medium_priority": ["AI Product Manager", "Data Product Manager", "Strategy"]
   },
   "scoring_weights": {
-    "role_match": 0.30,
-    "company_match": 0.25,
-    "industry_match": 0.20,
-    "location_match": 0.15,
-    "seniority_match": 0.10
-  },
-  "exclusions": {
-    "companies": ["CompanyToAvoid"],
-    "keywords": ["intern", "junior", "entry level", "contract", "part-time"],
-    "min_salary": 150000
+    "title_match": 10,
+    "industry_match": 8,
+    "company_match": 7,
+    "location_match": 6,
+    "seniority_match": 9
   }
 }
