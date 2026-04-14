@@ -1,0 +1,20 @@
+{
+  "_comment": "ATS slug cache. Add companies via: python scripts/fetch_ats.py --probe 'Company Name'",
+  "companies": {
+    "Anthropic": {"ats": "greenhouse", "slug": "anthropic"},
+    "Stripe": {"ats": "greenhouse", "slug": "stripe"},
+    "OpenAI": {"ats": "ashby", "slug": "openai"},
+    "Plaid": {"ats": "lever", "slug": "plaid"},
+    "Linear": {"ats": "ashby", "slug": "linear"},
+    "Notion": {"ats": "lever", "slug": "notion"},
+    "Figma": {"ats": "greenhouse", "slug": "figma"},
+    "Vercel": {"ats": "ashby", "slug": "vercel"},
+    "Datadog": {"ats": "greenhouse", "slug": "datadog"},
+    "Ramp": {"ats": "ashby", "slug": "ramp"},
+    "Scale AI": {"ats": "lever", "slug": "scaleai"},
+    "Rippling": {"ats": "ashby", "slug": "rippling"},
+    "Coinbase": {"ats": "greenhouse", "slug": "coinbase"},
+    "Brex": {"ats": "greenhouse", "slug": "brex"},
+    "Retool": {"ats": "lever", "slug": "retool"}
+  }
+}

@@ -250,12 +250,12 @@ def _dedup_key(job):
 # --- Main ---
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch jobs via JSearch (RapidAPI)")
+    parser = argparse.ArgumentParser(description="Fetch jobs (ATS + optional JSearch)")
     parser.add_argument(
         "--keywords",
         nargs="+",
         default=DEFAULT_KEYWORDS,
-        help="Search keywords",
+        help="Search keywords (for JSearch; ATS uses config/search-criteria.json)",
     )
     parser.add_argument(
         "--locations",
@@ -267,38 +267,70 @@ def main():
         "--max-jobs",
         type=int,
         default=100,
-        help="Max jobs per keyword (default: 100)",
+        help="Max jobs per keyword for JSearch (default: 100)",
     )
     parser.add_argument(
         "--output",
         help="Output filename",
     )
+    parser.add_argument(
+        "--ats-only",
+        action="store_true",
+        help="Skip JSearch, fetch from ATS only",
+    )
 
     args = parser.parse_args()
     locations = args.locations or [DEFAULT_LOCATION, "Remote"]
 
-    print("Job Fetcher (JSEARCH)")
-    print("=" * 50)
-    print(f"Keywords: {args.keywords}")
-    print(f"Locations: {locations}")
-    print(f"Max jobs per keyword: {args.max_jobs}")
-
-    requests_estimate = len(args.keywords) * len(locations)
-    print(f"Estimated requests: {requests_estimate} (of 200/month free)")
-
+    print("Job Fetcher")
     print("=" * 50)
 
-    raw_jobs = fetch_jsearch(args.keywords, locations, args.max_jobs)
-    normalized = normalize_jsearch(raw_jobs)
+    any_jobs_fetched = False
 
-    if normalized:
-        save_jobs(normalized, args.output, "jsearch")
-        print(f"\nTotal unique jobs: {len(normalized)}")
+    # --- Phase 1: ATS direct fetch (always, if companies are configured) ---
+    ats_jobs = []
+    company_ats_file = SCRIPT_DIR.parent / "data" / "company-ats.json"
+    if company_ats_file.exists():
+        try:
+            from fetch_ats import fetch_all_ats_companies
+            ats_jobs = fetch_all_ats_companies()
+            if ats_jobs:
+                save_jobs(ats_jobs, None, "ats")
+                print(f"\nATS: {len(ats_jobs)} jobs from company career pages")
+                any_jobs_fetched = True
+        except ImportError:
+            print("  ATS fetch requires 'requests'. Install: pip install -r requirements.txt")
+        except Exception as e:
+            print(f"  (warning: ATS fetch failed: {e})")
     else:
-        print("\nNo jobs found. Check your API key and search parameters.")
+        print("  No data/company-ats.json — skipping ATS fetch")
+        print("  Add companies with: python scripts/fetch_ats.py --probe 'Company Name'")
+
+    # --- Phase 2: JSearch keyword search (only if RAPIDAPI_KEY is set) ---
+    if not args.ats_only and RAPIDAPI_KEY:
+        print(f"\nJSearch: keywords={args.keywords}, locations={locations}")
+        requests_estimate = len(args.keywords) * len(locations)
+        print(f"  Estimated requests: {requests_estimate} (of 200/month free)")
+
+        raw_jobs = fetch_jsearch(args.keywords, locations, args.max_jobs)
+        normalized = normalize_jsearch(raw_jobs)
+
+        if normalized:
+            save_jobs(normalized, args.output, "jsearch")
+            print(f"  JSearch: {len(normalized)} jobs from keyword search")
+            any_jobs_fetched = True
+        else:
+            print("  JSearch: no jobs found for these keywords/locations")
+    elif not args.ats_only and not RAPIDAPI_KEY:
+        print("\n  No RAPIDAPI_KEY set — skipping JSearch (ATS-only mode)")
+        print("  To add JSearch: python setup.py --api-key")
+
+    # --- Phase 3: Post-fetch chain ---
+    if not any_jobs_fetched:
+        print("\nNo jobs found from any source.")
         return
 
-    # Chain: refresh connection matches if the user has provided connections.
+    # Refresh connection matches if the user has provided connections.
     connections_file = SCRIPT_DIR.parent / "data" / "connections.csv"
     if connections_file.exists():
         print("\nRefreshing connection matches...")

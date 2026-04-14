@@ -38,15 +38,19 @@ That's it. `/job-search` is now available in any Claude Code session. To configu
 /job-search setup
 ```
 
-The wizard walks you through your profile, job search preferences, LinkedIn connections, and RapidAPI key, then fetches your first batch of jobs and opens the dashboard at `http://localhost:8777/dashboard.html`.
+The wizard walks you through your profile, job search preferences, target companies (auto-detected on Greenhouse, Lever, and Ashby career pages), LinkedIn connections, and an optional RapidAPI key, then fetches your first batch of jobs and opens the dashboard at `http://localhost:8777/dashboard.html`.
 
 ### What you get
 
-- Guided wizard that collects your profile, target roles, keywords, locations, writing style, LinkedIn connections, and RapidAPI key
-- Job fetcher that pulls listings from JSearch (free tier: 200 requests/month) across LinkedIn, Indeed, Glassdoor, and ZipRecruiter
+- Guided wizard that collects your profile, target roles, keywords, locations, writing style, LinkedIn connections, and target companies
+- **Job fetching from two sources in one command** (`/job-search fetch jobs`):
+  - **ATS direct fetch** (always, free, no signup): pulls open roles from company career pages on Greenhouse, Lever, and Ashby. Works out of the box after setup — no API key needed.
+  - **JSearch keyword search** (optional, if you add a RapidAPI key): searches across LinkedIn, Indeed, Glassdoor, and ZipRecruiter. Free tier: 200 requests/month.
+  - If no RapidAPI key is configured, only ATS sources are used. You still get real jobs from your target companies.
 - Tailored cover letters, resumes, and outreach messages — generated in Claude Code, applied to specific job descriptions
 - LinkedIn connection matching that surfaces who you already know at each target company
 - Local HTML dashboard at `http://localhost:8777` for browsing fetched jobs, marking applications, and tracking outreach response rates
+- **Add companies any time**: `python scripts/fetch_ats.py --probe "Company Name"` auto-detects the ATS and adds it to your watchlist
 
 ### Where your data lives
 
@@ -59,7 +63,16 @@ Everything is stored under `~/.claude/skills/job-search/`:
 - `dashboard/` — the local HTML dashboard
 - `outputs/` — generated cover letters, resumes, and daily summaries (gitignored)
 
-To back up your job search state, just `tar` that directory. To upgrade later, `cd ~/.claude/skills/job-search && git pull`.
+To back up your job search state, just `tar` that directory.
+
+### Upgrading
+
+```bash
+cd ~/.claude/skills/job-search
+git pull
+```
+
+Your config files, tracking data, resume, and connections are gitignored and will not be overwritten. Only the code, skill files, and starter data change on pull.
 
 ### Daily commands
 

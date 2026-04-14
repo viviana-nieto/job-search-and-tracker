@@ -1091,6 +1091,24 @@ def run_interactive_setup():
     # ---- 4. Search Preferences ----
     search_criteria = collect_search_preferences()
 
+    # ---- 4b. Auto-probe target companies for ATS ----
+    target_companies = search_criteria.get("companies", {}).get("target", [])
+    if target_companies:
+        subheading("Detecting ATS for target companies")
+        print("  Checking which companies use Greenhouse, Lever, or Ashby...")
+        print("  (These are free public APIs — no signup needed.)")
+        print()
+        try:
+            sys.path.insert(0, str(PROJECT_DIR / "scripts"))
+            from fetch_ats import probe_company
+            for company in target_companies:
+                result = probe_company(company, verbose=True)
+        except ImportError:
+            print("  (skipped — 'requests' not installed yet)")
+            print("  Run later with: python scripts/fetch_ats.py --probe 'Company Name'")
+        except Exception as e:
+            print(f"  (warning: ATS probe failed: {e})")
+
     # ---- 5. Writing Style ----
     first_name = personal["name"].split()[0]
     languages = personal.get("languages", ["en"])

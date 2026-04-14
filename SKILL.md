@@ -304,26 +304,43 @@ Tell them the daily commands:
 
 # Subcommand: fetch jobs
 
-Fetch jobs from JSearch via RapidAPI. Defaults to the keywords and locations in `config/search-criteria.json`.
+Fetch jobs from two sources in one command:
+
+1. **ATS direct fetch** (always runs if `data/company-ats.json` has entries): pulls open roles from Greenhouse, Lever, and Ashby career pages. Free, no API key, no signup.
+2. **JSearch keyword search** (only if `$RAPIDAPI_KEY` is set): searches across LinkedIn, Indeed, Glassdoor, ZipRecruiter. Free tier: 200 requests/month.
+
+If no `$RAPIDAPI_KEY` is configured, only ATS sources are used — that's the free baseline and it works out of the box after setup.
 
 **Variants:**
-- `fetch jobs` — default search
-- `fetch jobs for [keywords]` — override keywords
-- `fetch jobs in [locations]` — override locations
+- `fetch jobs` — default: ATS + JSearch (if key set)
+- `fetch jobs for [keywords]` — override JSearch keywords
+- `fetch jobs in [locations]` — override JSearch locations
 
 ## Before fetching
 
-1. Read `config/search-criteria.json` to get default keywords and locations.
-2. Check that `$RAPIDAPI_KEY` is set. If not, direct the user to `/job-search setup` (step 8) or have them set it manually.
-3. Check that `requests` is installed. If not, offer to run `python -m pip install -r requirements.txt`.
+1. Read `config/search-criteria.json` for keywords and locations.
+2. Check that `requests` is installed. If not, offer to run `python -m pip install -r requirements.txt`.
+3. Check `data/company-ats.json` for companies to fetch from via ATS. If empty, suggest `python scripts/fetch_ats.py --probe "Company Name"` to add companies.
 
 ## Run the fetch
+
+```
+python scripts/fetch_jobs.py
+```
+
+Or with JSearch-specific options:
 
 ```
 python scripts/fetch_jobs.py --keywords "..." "..." --locations "..." "..."
 ```
 
-The script automatically chains `match_connections.py` if `data/connections.csv` exists, and regenerates `dashboard/data.js`. Report how many jobs were fetched and whether new connection matches appeared.
+Or ATS only (skip JSearch even if a key is set):
+
+```
+python scripts/fetch_jobs.py --ats-only
+```
+
+The script automatically chains `match_connections.py` if `data/connections.csv` exists, and regenerates `dashboard/data.js`. Report how many jobs were fetched from each source.
 
 ## After fetching
 
@@ -331,6 +348,24 @@ Offer to open the dashboard:
 
 ```
 python scripts/dashboard.py
+```
+
+---
+
+# Subcommand: add company
+
+Add a company to your ATS watchlist. Auto-detects whether they use Greenhouse, Lever, or Ashby and caches the result in `data/company-ats.json`.
+
+```
+python scripts/fetch_ats.py --probe "[Company Name]"
+```
+
+The next `/job-search fetch jobs` will include this company's open roles. If the company doesn't use any of the three supported ATS systems, the result is cached as "none" so repeated probes don't waste time.
+
+To see all currently configured companies:
+
+```
+python scripts/fetch_ats.py --dry-run
 ```
 
 ---
