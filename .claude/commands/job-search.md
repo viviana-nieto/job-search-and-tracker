@@ -66,226 +66,228 @@ Files you'll read, depending on the subcommand:
 
 # Subcommand: setup
 
-Walk the user through the full configuration conversationally. Same outcome as running `python setup.py` in a terminal, but without leaving the Claude Code chat.
+Configure the job search agent by extracting the user's profile from their resume, then collecting job preferences and writing style. Under 3 minutes if the user has a resume.
 
 **Do NOT run `python setup.py` directly.** That script uses `input()` extensively and will hang when invoked via the Bash tool. This subcommand IS the setup wizard, translated into chat.
 
-## Required reading before asking any questions
+If `config/profile.json` already exists, ask whether they want to re-run from scratch or update individual pieces (`python setup.py --connections`, `--keywords`, `--api-key`, `--fetch`). Don't clobber their config without consent.
 
-Read these first so you know exactly what to collect and produce:
+## Required reading before starting
 
-1. **`setup.py`** — search for `collect_personal_info`, `collect_career_context`, `collect_credibility`, `collect_search_preferences`, `collect_writing_style`, `collect_talking_points`. Each has the canonical question text, default values, and the exact dict shape it returns. Mirror them.
-2. **`config/profile.sample.json`**, **`config/search-criteria.sample.json`**, **`config/writing-style.sample.json`**, **`config/talking-points.sample.json`** — the exact JSON structure you'll produce.
-3. **`data/tracking-template.json`** — the v3.0 tracking schema template.
+Read these files so you know the exact JSON shapes you need to produce:
 
-## Step 0 — Introduction
+1. **`config/profile.sample.json`** — profile structure (name, contact, career, credibility, resume_path, languages)
+2. **`config/search-criteria.sample.json`** — roles, companies, industries, locations, keywords, scoring weights
+3. **`config/writing-style.sample.json`** — sign-offs, PM phrases, writing rules (per-language)
+4. **`config/talking-points.sample.json`** — industry-organized talking points
+5. **`data/tracking-template.json`** — the v3.0 tracking schema template
 
-> I'll walk you through configuring this job search agent. It takes about 5-10 minutes and covers:
+## Step 1 — Resume
+
+Ask the user:
+
+> Drop me the path to your resume (PDF, Markdown, or DOCX) and I'll extract your profile from it. This saves about 30 questions worth of manual input.
 >
-> 1. Personal info and career context
-> 2. Credibility snippets used in outreach
-> 3. Job search preferences (roles, keywords, locations)
-> 4. Writing style and talking points
-> 5. LinkedIn connections (optional — skip and come back later)
-> 6. RapidAPI key (optional — free tier: 200 requests/month)
-> 7. First fetch + dashboard launch
+> If you don't have a resume ready, just say "skip" and I'll ask you the questions instead.
+
+**If they provide a path:**
+- Validate: file exists (`test -f` via Bash), extension in `.pdf`, `.md`, `.markdown`, `.docx`
+- If invalid, loop: offer another path, or skip to manual
+- Read the file using the **Read** tool (Claude Code reads PDFs natively, up to 20 pages)
+- Offer to copy it to `data/resume.<ext>` (gitignored, portable): `cp "$SRC" data/resume.<ext>`
+- Proceed to Step 2 (extraction)
+
+**If they say "skip" or don't have a resume:**
+- Fall back to the manual collection flow. Read `setup.py` and follow the questions from `collect_personal_info`, `collect_career_context`, and `collect_credibility` functions (about 29 questions total). Then skip Step 2 and go straight to Step 3.
+
+## Step 2 — Confirm extracted profile
+
+After reading the resume, extract and present the following in a structured block:
+
+- **Name** and **contact info** (email, phone, location, website/LinkedIn)
+- **Professional headline** (synthesize from most recent role + seniority)
+- **Career arc**: list each role with company, title, dates, and one achievement line
+- **Core skills**: extract from skills sections, technologies mentioned, and role descriptions
+- **Education**: degrees, schools, graduation years
+- **Credibility statements** (Claude generates these from the resume's achievements):
+  - **Short** (1 sentence): e.g., "8 years building AI and fintech products at scale"
+  - **Medium** (2-3 sentences): expanded version with specific numbers
+  - **Long** (full paragraph): synthesized from the strongest achievements
+- **Key quantified impact**: the single most impressive metric
+- **Languages**: infer from resume language; ask if bilingual/multilingual is unclear
+
+Present all of this and ask:
+
+> Does this look right? Anything to add or correct?
+
+Apply any corrections the user gives. This one interaction replaces ~29 manual questions.
+
+Then present the **signature block** that will appear on cover letters:
+
+> This is how your cover letter signature will look:
 >
-> Ready to start?
+> Best,
+>
+> Jane Doe
+> Senior Product Manager
+> jane@example.com | 555-1234
+> linkedin.com/in/janedoe
+>
+> Want to change anything? (name format, title, contact info, sign-off)
 
-If the user declines, stop. If they agree, continue.
+The user confirms or edits. These fields map to the `{{name}}`, `{{title}}`, `{{email}}`, `{{phone}}`, `{{website}}`, `{{sign_off_formal}}` template variables used by cover letters, emails, and PDFs. Getting them right here means every generated document uses the correct signature.
 
-If `config/profile.json` already exists, ask whether they want to re-run the full wizard (overwrites) or update individual pieces via flags like `python setup.py --connections`, `--keywords`, `--api-key`, `--fetch`. Don't clobber their config without consent.
+Also ask:
 
-## Step 1 — Personal Information
+> What languages do you want outreach generated in? (default: en)
 
-Mirror `collect_personal_info` in setup.py. Ask for:
+## Step 3 — What jobs are you looking for?
 
-- Full name (required)
-- Professional headline (e.g., "Product and AI Leader") (required)
-- Email, phone (required)
-- Website or LinkedIn URL (optional)
-- Location (default: `San Francisco Bay Area`)
+Three questions:
 
-Then the resume prompt:
+> 1. What roles are you targeting? (e.g., "Product Manager, Director of Product")
+> 2. Any specific companies you're interested in?
+> 3. Where do you want to work? (e.g., "San Francisco Bay Area, Remote")
 
-- Ask for the absolute path to the resume file.
-- Validate: file exists (`test -f` via Bash), extension in `.pdf`, `.md`, `.markdown`, `.docx`.
-- If valid, offer to copy it to `data/resume.<ext>` (gitignored, portable). If accepted, `cp "$SRC" data/resume.<ext>` and store the in-project path. If declined, store the original absolute path.
-- If they want to skip the resume entirely, warn that cover-letter and resume-tailoring commands will have very little context, and require explicit "skip anyway" confirmation.
+From the answers + the resume, Claude auto-fills the rest of `search-criteria.json`:
+- `exclude_titles`: infer from the user's seniority (a Senior PM probably excludes Junior, Associate, Intern, Entry Level)
+- `industries.target`: infer from the resume's industry experience
+- `search_queries.high_priority`: derived from target roles
+- `search_queries.medium_priority`: derived from the user's industry keywords
+- `scoring_weights`: use sensible defaults (title=10, industry=8, company=7, location=6, seniority=9) — do not ask
 
-Finally:
+**Auto-probe target companies for ATS:**
 
-- Languages (comma-separated, default: `en, es`)
-- Default language (default: first language in the list)
-
-## Step 2 — Career Context
-
-Mirror `collect_career_context`:
-
-- Years of experience (default: `10`)
-- 2-4 key roles, each with company, title, achievement line
-- Core skills (list)
-- Education (degree, school, year)
-
-## Step 3 — Credibility Snippets
-
-Mirror `collect_credibility`. Collect short, medium, and long credibility statements used in outreach templates, plus 2-3 quantified impact bullets. Consult `setup.py:collect_credibility` for the exact dict keys and prompts.
-
-## Step 4 — Job Search Preferences
-
-Mirror `collect_search_preferences`:
-
-- Target role titles (default: Product Manager, Senior PM, Director of Product)
-- Target industries (default: AI/ML, SaaS, Fintech, Health Tech)
-- Target companies (optional)
-- Preferred locations (default: San Francisco Bay Area, Remote)
-- Acceptable locations (optional)
-- Titles to exclude (default: Junior, Associate, Intern, Entry Level)
-- Companies to exclude (optional)
-- High-priority search keywords
-- Medium-priority keywords (default: AI Product Manager, Data Product Manager, Strategy)
-- Scoring weights (1-10): title, industry, company, location, seniority (defaults: 10, 8, 7, 6, 9)
-
-Consult `setup.py:collect_search_preferences` for the nested dict shape.
-
-## Step 5 — Writing Style
-
-Mirror `collect_writing_style`. Uses the user's first name and language list. Collects sign-offs per context (LinkedIn, email, formal), PM phrasing per company size, and writing rules. Shape is nested by language: `{"en": {...}, "es": {...}}`.
-
-Consult `setup.py:collect_writing_style` for the exact structure.
-
-## Step 6 — Talking Points
-
-Mirror `collect_talking_points`. Industry-organized (AI/ML, fintech, enterprise SaaS, etc.).
-
-## Step 7 — LinkedIn Connections (optional)
-
-Ask: "Have you exported your LinkedIn connections?"
-
-**If no:** tell them how — open https://www.linkedin.com/mypreferences/d/download-my-data, select Connections, click Request archive, wait for the email. Offer to pause.
-
-**If yes:** ask for the absolute path to their `Connections.csv`. Validate the file exists. Copy it:
+If the user listed target companies, probe each for Greenhouse/Lever/Ashby and report:
 
 ```
-cp "$SRC_PATH" data/connections.csv
+python scripts/fetch_ats.py --probe "[Company Name]"
 ```
 
-**If skipped:** note they can run `python setup.py --connections` later.
+Or call `probe_company(name)` directly if imported. Report results:
 
-## Step 8 — RapidAPI Key (optional)
+> Checking which companies have public career pages...
+>   Stripe: Greenhouse (23 open roles)
+>   OpenAI: Ashby (45 open roles)
+>   Acme Corp: no ATS detected
 
-Check if a key is already set:
+## Step 4 — Writing style
 
-```
-echo "${RAPIDAPI_KEY:-MISSING}"
-```
+Ask:
 
-If it's a real key, use it and skip the rest of this step.
+> To make your outreach sound like YOU instead of generic AI, paste a few paragraphs of something you've actually written — a LinkedIn post, an email, a Slack message, anything that shows your natural voice.
+>
+> Skip this if you want clean defaults. You can always refine later.
 
-Otherwise ask: "Do you have a RapidAPI key?"
+**If they provide a writing sample:**
 
-**If no:** walk them through signup, pausing after each step:
+1. Analyze the sample for: sentence length patterns, word choices, formality level, directness, humor, personal quirks
+2. Generate `config/writing-style.json` from the analysis:
+   - `sign_offs`: infer appropriate sign-offs matching their tone (per context: LinkedIn, email, formal)
+   - `pm_phrases`: infer from their career level (startup vs. large company phrasing)
+   - `writing_rules`: extract style patterns as rules (e.g., "uses short sentences", "avoids jargon", "leads with data")
+3. Generate `config/talking-points.json` from the resume's industry experience (no questions asked — just extract relevant industry talking points)
 
-1. Open https://rapidapi.com/ and sign up (Google or GitHub login works)
-2. Go to https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch
-3. Click "Subscribe to Test" and choose the Basic (Free) plan (200 req/month, no credit card)
-4. Copy the `X-RapidAPI-Key` from the API playground
+4. **Generate two sample outputs** to validate the style:
+   - A cover letter for a realistic role at one of their target companies
+   - A LinkedIn connection request to a recruiter at that company (under 300 chars)
+   - Apply the humanizer rules from `config/humanizer-rules.json` automatically before presenting
 
-**Once they have a key:** ask them to paste it. Validate non-empty, no whitespace, reasonable length.
+5. Present the samples:
 
-Offer to persist it to the shell rc:
+> Here's what your outreach would sound like:
+>
+> **Cover letter for [Company] — [Role]:**
+> [3-paragraph letter using their voice, credibility, and talking points]
+>
+> **LinkedIn connection request (287/300 chars):**
+> [Short, direct message in their voice]
+>
+> How do these sound? Too formal? Too casual? Anything you'd change?
 
-- Detect shell from `$SHELL`. `zsh` → `~/.zshrc`, `bash` → `~/.bashrc`. Ambiguous → ask.
-- Grep for an existing `export RAPIDAPI_KEY` line. If one exists, ask for permission to replace before writing.
-- Append (or replace) via Bash:
-  ```
-  echo '' >> ~/.zshrc
-  echo '# Job Search Agent (JSearch)' >> ~/.zshrc
-  echo 'export RAPIDAPI_KEY="$PASTED_KEY"' >> ~/.zshrc
-  ```
-- Tell them to `source` the file or open a new terminal.
+6. Apply any feedback by adjusting `writing-style.json` parameters.
 
-**Important:** each Bash call runs in its own subshell. Adding to `~/.zshrc` does NOT make the key available to subsequent Bash calls in this session. Hold the pasted key in chat state and pass it inline to the first fetch in Step 11: `RAPIDAPI_KEY="..." python scripts/fetch_jobs.py ...`
+**If they skip the writing sample:**
+- Use defaults: short, direct, no sycophantic language
+- Generate `writing-style.json` with sensible rules (humanizer-aligned)
+- Generate `talking-points.json` from resume industry experience
+- Skip the sample output generation
 
-## Step 9 — Write config files
+## Step 5 — Write config files
 
-Use the **Write** tool to create these four files. Use shapes from `config/*.sample.json` as templates. Never use Bash `echo` redirection for JSON — always use Write.
+Use the **Write** tool to create 4 JSON files. Read `config/*.sample.json` for the exact shapes. Never use Bash `echo` redirection for JSON — always use Write.
 
-1. `config/profile.json` — populate from Steps 1-3. `filename_prefix` = `LastName_FirstName` with non-alphanumerics stripped (see `setup.py:make_filename_prefix`). Include `resume_path`, `languages`, `default_language`.
-2. `config/search-criteria.json` — from Step 4.
-3. `config/writing-style.json` — from Step 5.
-4. `config/talking-points.json` — from Step 6.
+1. `config/profile.json` — from Steps 1-2. Include `filename_prefix` = `LastName_FirstName` (strip non-alphanumerics, see `setup.py:make_filename_prefix`). Include `resume_path`, `languages`, `default_language`.
+2. `config/search-criteria.json` — from Step 3 + auto-inferred fields.
+3. `config/writing-style.json` — from Step 4 (or defaults).
+4. `config/talking-points.json` — auto-generated from resume industry experience.
 
-Confirm each file's path to the user after writing.
+Confirm each file path after writing.
 
-Ensure `data/tracking.json` exists for the dashboard:
+Ensure `data/tracking.json` exists:
 
 ```
 test -f data/tracking.json || cp data/tracking-template.json data/tracking.json
 ```
 
-## Step 10 — Generate CLAUDE.md
-
-Delegate to the existing non-interactive entry point:
+## Step 6 — Generate CLAUDE.md
 
 ```
 python setup.py --from-config
 ```
 
-This reads the config JSONs you just wrote and regenerates `CLAUDE.md` at the project root. Non-interactive, safe to run via Bash.
+Non-interactive. Reads the config JSONs and generates `CLAUDE.md` at the project root.
 
-## Step 11 — First fetch and dashboard
+## Step 7 — LinkedIn Connections (optional)
 
-If a RapidAPI key is available, ask: "Fetch jobs now? This uses about N API requests of 200/month free" where N = keywords × locations.
+> Have you exported your LinkedIn connections?
 
-**Check dependencies first.** `fetch_jobs.py` needs `requests` and `generate_pdf.py` needs `reportlab`. If `python -c "import requests" 2>/dev/null; echo $?` returns non-zero, offer to install:
+**If no:** show the export instructions (open https://www.linkedin.com/mypreferences/d/download-my-data, select Connections, request archive, wait for email). Offer to pause or skip.
+
+**If yes:** ask for path, validate, copy to `data/connections.csv`.
+
+**If skipped:** tell them `python setup.py --connections` later.
+
+## Step 8 — RapidAPI Key (optional)
+
+> The tool already fetches jobs from company career pages (free, no signup). Want to ALSO search across LinkedIn, Indeed, Glassdoor, and ZipRecruiter? That requires a free RapidAPI key (200 requests/month, no credit card).
+
+Check if already set: `echo "${RAPIDAPI_KEY:-MISSING}"`
+
+If missing, walk through signup (same 4-step guide as before). After pasting the key, offer to persist to shell rc. Hold key in chat state for Step 9.
+
+**Framing matters:** position this as an optional upgrade, not a required step. ATS fetching already works without it.
+
+## Step 9 — Fetch + dashboard
+
+**Check dependencies:** if `python -c "import requests" 2>/dev/null; echo $?` returns non-zero, offer to install: `python -m pip install -r requirements.txt`
+
+**Run the fetch:**
 
 ```
-python -m pip install -r requirements.txt
+python scripts/fetch_jobs.py
 ```
 
-Ask for consent before running pip. Respect externally-managed Python environments — if pip fails, report the error and tell the user to set up a venv.
+(If RapidAPI key was pasted in Step 8, prepend `RAPIDAPI_KEY="$KEY"` to the command.)
 
-**If deps are ready, run the fetch:**
+The script runs ATS fetch first (from probed companies), then JSearch (if key set), chains connection matching, and regenerates dashboard data.
 
-```
-RAPIDAPI_KEY="$KEY" python scripts/fetch_jobs.py --keywords "$KW1" "$KW2" ... --locations "$LOC1" "$LOC2" ...
-```
-
-Each keyword and location is a separate shell-quoted argument (nargs="+").
-
-**After the fetch:**
-
-```
-python scripts/generate_data_js.py
-```
-
-Then offer: "Open the dashboard?"
-
-**If yes:**
+**Open the dashboard:**
 
 ```
 python scripts/dashboard.py
 ```
 
-Tell the user to visit http://localhost:8777/dashboard.html. The launcher auto-opens the browser by default; for headless sessions use `--no-browser`.
+## Step 10 — Wrap up
 
-## Step 12 — Wrap up
-
-Summarize what was created:
-
-- Config files at `config/profile.json`, `config/search-criteria.json`, `config/writing-style.json`, `config/talking-points.json`
-- `CLAUDE.md` at the project root
-- `data/connections.csv` (if provided)
-- `data/tracking.json`
-- Dashboard running at http://localhost:8777 (if opened)
-
-Tell them the daily commands:
+Summarize what was created and the daily commands:
 
 - `/job-search fetch jobs` — fetch more jobs
-- `/job-search show stats` — see outreach performance
+- `/job-search write cover letter for [Company] [Role]` — tailored cover letter
+- `/job-search run pipeline` — full pipeline for selected jobs
+- `/job-search show stats` — outreach performance
+- `/job-search add company` — add a company to your ATS watchlist
 - `python scripts/dashboard.py` — open the dashboard
-- `/job-search setup` — re-run the wizard
 
 ---
 
