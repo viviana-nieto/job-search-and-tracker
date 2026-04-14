@@ -805,13 +805,27 @@ function submitSelection() {
     const p = cb.value.split('|||');
     selected.push({ company:p[0], title:p[1], variant:cb.dataset.variant });
   });
-  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   const data = { date: new Date().toISOString().slice(0,10), generated_at: new Date().toISOString(), selected_jobs: selected, source: 'data/jobs/all-jobs.json' };
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `selected-jobs-${ts}.json`;
-  a.click();
+
+  // Save to workspace via local server API (preferred when server is running)
+  fetch(API + '/selected-jobs', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data, null, 2),
+  })
+  .then(r => r.json())
+  .then(res => {
+    alert(`Saved ${selected.length} selected jobs. Run /job-search run pipeline to generate materials.`);
+  })
+  .catch(() => {
+    // Fallback: download as file if server is not running
+    const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `selected-jobs-${ts}.json`;
+    a.click();
+  });
 }
 
 // ─── Filters ───

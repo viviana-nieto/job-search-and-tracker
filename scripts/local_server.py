@@ -134,6 +134,26 @@ class JobSearchHandler(SimpleHTTPRequestHandler):
             print(f"  Logged outreach: {outreach_entry.get('name')} at {company}")
             return
 
+        if self.path == "/api/selected-jobs":
+            selected_file = tracking.PROJECT_DIR / "data" / "selected-jobs.json"
+            selected_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(selected_file, "w") as f:
+                json.dump(data, f, indent=2)
+            self._send_json({"status": "saved", "path": str(selected_file)})
+            count = len(data.get("selected_jobs", []))
+            print(f"  Saved {count} selected jobs to {selected_file}")
+            return
+
+        if self.path == "/api/selected-companies":
+            selected_file = tracking.PROJECT_DIR / "data" / "selected-companies.json"
+            selected_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(selected_file, "w") as f:
+                json.dump(data, f, indent=2)
+            self._send_json({"status": "saved", "path": str(selected_file)})
+            count = len(data.get("companies", []))
+            print(f"  Saved {count} selected companies to {selected_file}")
+            return
+
         self.send_response(404)
         self.end_headers()
 
