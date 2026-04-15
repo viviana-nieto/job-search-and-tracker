@@ -282,7 +282,7 @@ function extractContext(desc, company, title) {
   const lower = desc.toLowerCase();
   const titleLower = title.toLowerCase();
 
-  // Industry/mission keywords to match against Viviana's background
+  // Industry/mission keywords to match against the user's background
   const hooks = [];
 
   // Health/care context
@@ -334,17 +334,17 @@ function getVariants(j) {
   const passion = hook ? ` Passionate about ${hook}.` : '';
   const experience = hook ? ` I've built AI-powered products focused on ${hook}.` : ' I build AI products hands-on.';
 
-  // Variant A: Applied + founder credibility + context hook
-  let A = `Hi [Name], I applied for the ${title} role at ${company}. As a ${pm} and founder, I built AI-powered products from 0 to 1. 10+ years in AI products.${passion} Would love to connect. ~Viviana`;
+  // Variant A: Applied + credibility + context hook
+  let A = `Hi [Name], I applied for the ${title} role at ${company}. [Your credibility statement].${passion} Would love to connect.`;
 
   // Variant B: Applied + specific skills + context match
-  let B = `Hi [Name], I applied for the ${title} role at ${company}.${experience} Shipped ML roadmaps, agentic frameworks, and enterprise AI. Would love to connect! ~Viviana`;
+  let B = `Hi [Name], I applied for the ${title} role at ${company}.${experience} Would love to connect!`;
 
   // Variant C: Mission-driven + context hook
-  let C = `Hi [Name], I'm exploring my next opportunity and applied for the ${title} role at ${company}. Love what the team is building.${passion} I'm a ${pm} with 10+ years in AI. Would love to connect! ~Viviana`;
+  let C = `Hi [Name], I'm exploring my next opportunity and applied for the ${title} role at ${company}. Love what the team is building.${passion} I'm a ${pm}. Would love to connect!`;
 
   // Variant D: Quantified impact + context
-  let D = `Hi [Name], I applied for the ${title} role at ${company}. I'm a ${pm} who has driven $100M+ in documented impact across AI products.${passion} Would love to learn more! ~Viviana`;
+  let D = `Hi [Name], I applied for the ${title} role at ${company}. I'm a ${pm}. [Your top metric].${passion} Would love to learn more!`;
 
   // Trim any that exceed 300 chars by removing the passion/experience clause
   const trim = (msg) => {
@@ -687,7 +687,7 @@ function showReferralForm(btn, key, name, company, linkedinUrl) {
   const size = getCompanySize(jobCompany);
   const pm = size === 'startup' ? 'startup PM' : 'PM';
 
-  const msg = `Hi ${name}, I recently applied for the ${jobTitle} role at ${jobCompany}. Since you're there, I wanted to reach out directly. I'm a ${pm} with 10+ years in AI products. Would you be open to putting in a referral? Happy to send my resume. Thanks! ~Viviana`;
+  const msg = `Hi ${name}, I recently applied for the ${jobTitle} role at ${jobCompany}. Since you're there, I wanted to reach out directly. I'm a ${pm}. Would you be open to putting in a referral? Happy to send my resume. Thanks!`;
 
   msgEl.textContent = msg;
   form.classList.add('visible');
