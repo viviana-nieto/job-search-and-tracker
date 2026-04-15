@@ -327,11 +327,21 @@ State is persisted to `data/tracking.json` (gitignored). The dashboard talks to 
 
 ## Tests
 
-The test suite covers the tracking module and the scripts that depend on it. Tests use only Python's stdlib `unittest` — no extra dependencies to install — and each test isolates itself with `tempfile`, so running them never touches your real `data/tracking.json` or any other user data.
+The test suite covers the tracking module, the scripts that depend on it, and a PII guard that scans all tracked files for personal data leaks. Tests use only Python's stdlib `unittest` — no extra dependencies to install.
 
 ```bash
 python -m unittest discover tests
 ```
+
+### Pre-commit PII guard
+
+To automatically block commits that contain personal data (names, emails, file paths, embedded data blobs):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This runs a scan on staged files before every commit. If it detects personal data, the commit is rejected with a message showing what was found. To skip it once for a commit you've manually verified: `git commit --no-verify`.
 
 ## Upgrading from a pre-dashboard clone
 

@@ -1,0 +1,63 @@
+#!/bin/bash
+# Pre-commit hook: scan staged files for personal data before committing.
+#
+# Install:  git config core.hooksPath .githooks
+# Skip once: git commit --no-verify
+
+set -e
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)
+[ -z "$STAGED" ] && exit 0
+
+# Filter to text files only
+TEXT_FILES=$(echo "$STAGED" | grep -v '\.png$\|\.jpg$\|\.jpeg$\|\.gif$\|\.ico$\|\.pdf$\|\.pyc$' || true)
+[ -z "$TEXT_FILES" ] && exit 0
+
+FAIL=0
+
+# 1. Owner name (exclude GitHub URL references)
+MATCHES=$(echo "$TEXT_FILES" | xargs grep -in "viviana" 2>/dev/null | grep -iv "viviana-nieto" | grep -iv "github\.com" || true)
+if [ -n "$MATCHES" ]; then
+    echo "PII BLOCKED: 'viviana' found in staged files:"
+    echo "$MATCHES" | head -5
+    FAIL=1
+fi
+
+# 2. Work identity
+MATCHES=$(echo "$TEXT_FILES" | xargs grep -in "felix.vita\|felixvita" 2>/dev/null || true)
+if [ -n "$MATCHES" ]; then
+    echo "PII BLOCKED: work identity found in staged files:"
+    echo "$MATCHES" | head -5
+    FAIL=1
+fi
+
+# 3. Real email addresses (allow @example.com and noreply@)
+MATCHES=$(echo "$TEXT_FILES" | xargs grep -inE "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" 2>/dev/null | grep -v "@example\.com" | grep -v "noreply@" || true)
+if [ -n "$MATCHES" ]; then
+    echo "PII BLOCKED: real email addresses found in staged files:"
+    echo "$MATCHES" | head -5
+    FAIL=1
+fi
+
+# 4. Personal file paths
+MATCHES=$(echo "$TEXT_FILES" | xargs grep -n "/Users/viviana/" 2>/dev/null || true)
+if [ -n "$MATCHES" ]; then
+    echo "PII BLOCKED: personal file paths found in staged files:"
+    echo "$MATCHES" | head -5
+    FAIL=1
+fi
+
+# 5. Large lines in HTML (>10KB = likely embedded data)
+for f in $(echo "$TEXT_FILES" | grep '\.html$' || true); do
+    MAX_LEN=$(awk '{print length}' "$f" 2>/dev/null | sort -rn | head -1 || echo 0)
+    if [ "$MAX_LEN" -gt 10000 ]; then
+        echo "PII BLOCKED: $f has a line of $MAX_LEN chars (likely embedded data)"
+        FAIL=1
+    fi
+done
+
+if [ "$FAIL" -eq 1 ]; then
+    echo ""
+    echo "Commit blocked. Fix the issues above or use --no-verify to skip."
+    exit 1
+fi
