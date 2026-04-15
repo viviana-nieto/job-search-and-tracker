@@ -786,6 +786,99 @@ Find the best LinkedIn connections to reach out to for a specific job.
 
 ---
 
+# Subcommand: analyze feedback
+
+Analyze outreach outcomes to identify what works and what doesn't, then write structured patterns that future content generation uses to improve.
+
+## How it works
+
+1. Read all outreach entries from `data/tracking.json` via `tracking.iter_outreach(data)`
+2. Separate entries with outcomes (accepted, replied, interview, declined, no_response) from pending entries
+3. Group resolved entries by context: (recipient_role, company_size, outreach_type)
+4. Within each group, compare positive outcomes (accepted, replied, interview) vs negative (no_response, declined)
+5. For each group with >= 3 resolved entries, analyze the message text differences using the four RLHF evaluation dimensions:
+
+   | Dimension | What to analyze |
+   |---|---|
+   | **Correctness** | Did successful messages reference specific, verifiable claims? Were the company/role details accurate? |
+   | **Completeness** | Did successful messages cover: who you are, why this company, what you bring, clear CTA? What did failed messages omit? |
+   | **Clarity** | Were successful messages shorter? More direct? Did they lead with the key differentiator? |
+   | **Context awareness** | Did successful messages match tone to recipient role and company size? |
+
+6. Identify systematic issues: patterns present across ALL outreach regardless of outcome
+7. Write the analysis to `data/feedback-patterns.json` with this structure:
+
+```json
+{
+  "last_analyzed": "2026-04-14",
+  "total_outreach": 45,
+  "total_with_outcomes": 32,
+  "patterns": {
+    "connection_requests": {
+      "what_works": [{"observation": "...", "confidence": "high|medium|low", "sample_size": 12, "dimensions": {...}}],
+      "what_fails": [{"observation": "...", "anti_pattern": "..."}],
+      "by_recipient_role": {"recruiter": {"positive_rate": 0.35, "n": 12, "best_approach": "..."}},
+      "by_company_size": {"startup": {"positive_rate": 0.40, "n": 10, "best_approach": "..."}}
+    },
+    "cover_letters": {
+      "ats_pass_patterns": ["..."],
+      "interview_patterns": ["..."]
+    },
+    "introductions": {
+      "what_works": ["..."],
+      "what_fails": ["..."]
+    }
+  },
+  "systematic_issues": ["..."]
+}
+```
+
+8. Present a summary to the user showing key findings and actionable patterns.
+
+If there are fewer than 5 resolved outreach entries total, tell the user there isn't enough data yet and to come back after more outcomes are tracked.
+
+---
+
+# Subcommand: request intro
+
+Generate an introduction request to a mutual connection, asking them to introduce you to someone at a target company.
+
+## Steps
+
+1. Ask for: the target person's name, their company, and the mutual connection's name
+2. Read `data/connections.csv` to verify the mutual connection exists and get their details
+3. Read `data/feedback-patterns.json` (if it exists) for intro-specific patterns
+4. Generate TWO pieces of content:
+   a. **Message to the mutual connection** — asking for the introduction, explaining why you're interested in the target company/role, and making it easy for them to help
+   b. **Forwardable blurb** — a short paragraph the connection can paste to the target person, introducing you in the third person
+5. Apply humanizer rules from `config/humanizer-rules.json`
+6. Present both for review
+7. After user approval, log as outreach with type="introduction-request" and the target_name, target_company, and relationship fields
+
+The forwardable blurb is key — asking a connection to "put in a good word" without giving them the words is asking them to do work. Providing a ready-to-forward blurb dramatically increases the likelihood they'll actually make the intro.
+
+---
+
+## Feedback-aware generation (applies to all write commands)
+
+Before generating any content (`write cover letter`, `write connection`, `write email`, `run pipeline`, `request intro`), check if `data/feedback-patterns.json` exists and has relevant patterns.
+
+If it does:
+
+1. Read the patterns file
+2. Identify which patterns apply to the current generation context (by recipient_role, company_size, outreach_type)
+3. Apply "what_works" patterns as positive constraints on the generation
+4. Avoid "what_fails" anti-patterns
+5. After generating, briefly note which patterns influenced the draft:
+
+> Based on your past outreach data: messages to startup recruiters that lead with a specific metric had 55% acceptance rate. I led with your $200M payment platform achievement.
+
+This transparency lets the user understand WHY the draft looks the way it does and correct the patterns if they disagree.
+
+If `data/feedback-patterns.json` doesn't exist yet, generate normally using defaults and suggest: "Run `/job-search analyze feedback` after you have a few outcomes tracked to improve future drafts."
+
+---
+
 ## Connection Matching Logic
 
 When ranking connections for a job opportunity, score each one:

@@ -303,6 +303,9 @@ def find_or_create_application(
             "offer": None,
         },
         "cover_letter": None,
+        "resume_path": None,
+        "materials_dir": None,
+        "rejection_stage": None,  # ats_screen | recruiter_screen | phone_interview | onsite | final_round
         "outreach": [],
         "notes": "",
     }
@@ -320,8 +323,17 @@ def build_outreach_entry(
     variant: Optional[str] = None,
     context: str = "job_search",
     company: Optional[str] = None,
+    company_size: Optional[str] = None,
+    ab_pair_id: Optional[str] = None,
+    target_name: Optional[str] = None,
+    target_company: Optional[str] = None,
+    relationship: Optional[str] = None,
 ) -> dict:
-    """Construct a v3.0 outreach dict. Caller attaches it to the right list."""
+    """Construct a v3.0 outreach dict. Caller attaches it to the right list.
+
+    For introduction-request type outreach, set target_name, target_company,
+    and relationship to track who the intro is for and the connection path.
+    """
     today_str = _today_str(today)
     msg = message or ""
     slug = _slug(name)
@@ -335,6 +347,8 @@ def build_outreach_entry(
         "message": msg,
         "message_length": len(msg),
         "context": context,
+        "company_size": company_size or "unknown",
+        "ab_pair_id": ab_pair_id,
         "dates": {"sent": today_str, "accepted": None, "replied": None, "interview": None},
         "outcome": "pending",
         "response_time_days": None,
@@ -342,6 +356,10 @@ def build_outreach_entry(
     }
     if company is not None:
         entry["company"] = company
+    if target_name is not None:
+        entry["target_name"] = target_name
+        entry["target_company"] = target_company
+        entry["relationship"] = relationship
     return entry
 
 
