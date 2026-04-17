@@ -194,6 +194,15 @@ def render_template(template_str, extra_vars=None, language=None):
     return re.sub(r'\{\{(.+?)\}\}', replacer, template_str)
 
 
+def load_resume_format():
+    """Load resume format profile, or None if not extracted yet."""
+    path = CONFIG_DIR / "resume-format.json"
+    if path.exists():
+        with open(path) as f:
+            return json.load(f)
+    return None
+
+
 def is_configured():
     """Check if the project has been configured (profile.json exists)."""
     return (CONFIG_DIR / "profile.json").exists()

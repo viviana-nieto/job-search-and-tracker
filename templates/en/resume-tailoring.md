@@ -42,6 +42,34 @@ Save tailored resume as markdown, maintaining the exact same section structure a
 - Bullet points reordered within each role
 - Professional summary adjusted
 
+### Visual format reproduction
+
+If `config/resume-format.json` exists, the PDF generator will mimic the
+original resume's visual style (fonts, sizes, colors, margins, bullet chars,
+section dividers). No changes needed in the markdown.
+
+For resumes with a 2-column layout (detected in the format profile), you can
+use these markers in the tailored markdown to control column placement:
+
+```
+<name + contact header here>
+
+<!-- sidebar -->
+## SKILLS
+- Python
+- SQL
+
+## EDUCATION
+Stanford MBA
+
+<!-- main -->
+## EXPERIENCE
+...
+```
+
+If no markers are provided, Skills / Education / Certifications / Languages
+default to the sidebar and everything else to the main column.
+
 ## Variables
 - `[Company]` - Target company
 - `[Role]` - Target role title

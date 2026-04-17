@@ -176,6 +176,19 @@ def collect_personal_info():
     print()
     resume_path = _collect_resume_path()
 
+    # Offer format extraction if a PDF resume was provided
+    if resume_path and resume_path.lower().endswith(".pdf"):
+        print("\n  Format extraction creates a style template from your resume so")
+        print("  that tailored resumes match your original layout exactly.")
+        if ask_yes_no("  Extract formatting from your resume PDF?", default="y"):
+            try:
+                from scripts.extract_resume_format import extract_and_save
+                extract_and_save(resume_path)
+                print("  Format profile saved to config/resume-format.json")
+            except Exception as e:
+                print(f"  Format extraction failed: {e}")
+                print("  You can retry later: python scripts/extract_resume_format.py --input <resume.pdf>")
+
     # Languages
     print("\n  Which languages do you want to generate outreach in?")
     languages = ask_list("Languages", default="en, es")

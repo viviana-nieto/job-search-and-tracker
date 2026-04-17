@@ -627,6 +627,22 @@ Tailor the base resume to match a specific job description.
    python scripts/generate_pdf.py --type resume --input [tailored.md] --company [Company]
    ```
 
+   If `config/resume-format.json` exists, the generated PDF will mimic the
+   visual style of the user's original resume (fonts, sizes, colors, margins,
+   bullet characters, section dividers, and column layout). If no format
+   profile is present, hardcoded defaults are used.
+
+   To extract or re-extract a format profile from the user's base resume:
+
+   ```
+   python scripts/extract_resume_format.py --input [resume.pdf]
+   ```
+
+   For 2-column layouts the tailored markdown may include
+   `<!-- sidebar -->` and `<!-- main -->` markers to control which sections
+   go where. Without markers, sections like Skills / Education / Certifications
+   default to the sidebar and everything else to the main column.
+
 7. Present the tailored resume, highlighting what changed and why.
 
 ---
