@@ -36,16 +36,16 @@ try:
         DEFAULT_KEYWORDS = get_default_keywords()
         DEFAULT_LOCATIONS = get_default_locations()
     else:
-        DEFAULT_KEYWORDS = ["Product Manager", "Software Engineer"]
-        DEFAULT_LOCATIONS = ["San Francisco Bay Area", "Remote"]
+        DEFAULT_KEYWORDS = []
+        DEFAULT_LOCATIONS = []
 except ImportError:
-    DEFAULT_KEYWORDS = ["Product Manager", "Software Engineer"]
-    DEFAULT_LOCATIONS = ["San Francisco Bay Area", "Remote"]
+    DEFAULT_KEYWORDS = []
+    DEFAULT_LOCATIONS = []
 
 # Configuration
 RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY", "")
 
-DEFAULT_LOCATION = DEFAULT_LOCATIONS[0] if DEFAULT_LOCATIONS else "San Francisco Bay Area"
+DEFAULT_LOCATION = DEFAULT_LOCATIONS[0] if DEFAULT_LOCATIONS else ""
 
 # Output directory — JOB_SEARCH_DIR overrides for workspace separation
 SCRIPT_DIR = Path(__file__).parent
@@ -84,7 +84,10 @@ def fetch_jsearch(keywords: list[str], locations: list[str] = None, max_jobs: in
         return []
 
     if locations is None:
-        locations = [DEFAULT_LOCATION, "Remote"]
+        if not DEFAULT_LOCATIONS:
+            print("Error: No search locations configured. Run /job-search setup first.")
+            return []
+        locations = DEFAULT_LOCATIONS
 
     headers = {
         "X-RapidAPI-Key": RAPIDAPI_KEY,
@@ -281,7 +284,17 @@ def main():
     )
 
     args = parser.parse_args()
-    locations = args.locations or [DEFAULT_LOCATION, "Remote"]
+
+    if not args.keywords and not DEFAULT_KEYWORDS:
+        print("Error: No search keywords configured. Run /job-search setup first.")
+        print("(Or pass --keywords explicitly)")
+        sys.exit(1)
+
+    locations = args.locations or DEFAULT_LOCATIONS
+    if not locations:
+        print("Error: No search locations configured. Run /job-search setup first.")
+        print("(Or pass --locations explicitly)")
+        sys.exit(1)
 
     print("Job Fetcher")
     print("=" * 50)

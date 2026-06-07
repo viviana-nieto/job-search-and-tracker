@@ -216,16 +216,18 @@ Also ask:
 
 Three questions:
 
-> 1. What roles are you targeting? (e.g., "Product Manager, Director of Product")
+> 1. What roles are you targeting? (e.g., "Software Engineer, Data Scientist, Marketing Manager")
 > 2. Any specific companies you're interested in?
 > 3. Where do you want to work? (e.g., "San Francisco Bay Area, Remote")
 
 From the answers + the resume, Claude auto-fills the rest of `search-criteria.json`:
-- `exclude_titles`: infer from the user's seniority (a Senior PM probably excludes Junior, Associate, Intern, Entry Level)
+- `exclude_titles`: ask the user what seniority levels to exclude (if any)
 - `industries.target`: infer from the resume's industry experience
-- `search_queries.high_priority`: derived from target roles
+- `search_queries.high_priority`: derived from target roles the user provided
 - `search_queries.medium_priority`: derived from the user's industry keywords
 - `scoring_weights`: use sensible defaults (title=10, industry=8, company=7, location=6, seniority=9) — do not ask
+
+**Important:** Never assume or pre-fill role titles, companies, or locations. All search criteria must come from the user's input during this step or be inferred from their resume. Do not use any hardcoded defaults.
 
 **Auto-probe target companies for ATS:**
 

@@ -1,22 +1,22 @@
 {
   "roles": {
-    "target": ["Product Manager", "Senior Product Manager", "Director of Product"],
-    "exclude_titles": ["Junior", "Associate", "Intern", "Entry Level"]
+    "target": ["YOUR_TARGET_ROLE_1", "YOUR_TARGET_ROLE_2"],
+    "exclude_titles": []
   },
   "companies": {
-    "target": ["Stripe", "OpenAI", "Plaid"],
+    "target": [],
     "exclude": []
   },
   "industries": {
-    "target": ["AI/ML", "SaaS", "Fintech", "Health Tech"]
+    "target": ["YOUR_INDUSTRY_1", "YOUR_INDUSTRY_2"]
   },
   "locations": {
-    "preferred": ["San Francisco Bay Area", "Remote"],
+    "preferred": ["YOUR_CITY_OR_REGION", "Remote"],
     "acceptable": []
   },
   "search_queries": {
-    "high_priority": ["Product Manager", "Senior Product Manager"],
-    "medium_priority": ["AI Product Manager", "Data Product Manager", "Strategy"]
+    "high_priority": ["YOUR_TARGET_ROLE_1", "YOUR_TARGET_ROLE_2"],
+    "medium_priority": []
   },
   "scoring_weights": {
     "title_match": 10,

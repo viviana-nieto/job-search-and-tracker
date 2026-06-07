@@ -238,7 +238,7 @@ def collect_career_context():
         print()
 
     subheading("Skills & Education")
-    skills = ask_list("Top skills (comma-separated)", default="Product Management, Data Science, AI/ML, Strategy")
+    skills = ask_list("Top skills (comma-separated)")
     education = ask("Education highlights (e.g. 'MBA Stanford, BS Computer Science MIT')")
 
     return {
@@ -308,13 +308,11 @@ def collect_search_preferences():
     subheading("Target Roles")
     target_roles = ask_list(
         "Target role titles (comma-separated)",
-        default="Product Manager, Senior Product Manager, Director of Product",
     )
 
     subheading("Industries & Companies")
     target_industries = ask_list(
         "Target industries (comma-separated)",
-        default="AI/ML, SaaS, Fintech, Health Tech",
     )
     target_companies = ask_list(
         "Target companies (comma-separated, optional -- press Enter to skip)",
@@ -324,7 +322,6 @@ def collect_search_preferences():
     subheading("Locations")
     preferred_locations = ask_list(
         "Preferred locations (comma-separated)",
-        default="San Francisco Bay Area, Remote",
     )
     acceptable_locations = ask_list(
         "Also acceptable locations (comma-separated, optional)",
@@ -333,8 +330,8 @@ def collect_search_preferences():
 
     subheading("Exclusions")
     exclude_titles = ask_list(
-        "Titles to exclude (comma-separated)",
-        default="Junior, Associate, Intern, Entry Level",
+        "Titles to exclude (comma-separated, optional)",
+        required=False,
     )
     exclude_companies = ask_list(
         "Companies to exclude (comma-separated, optional)",
@@ -344,11 +341,11 @@ def collect_search_preferences():
     subheading("Search Keywords")
     high_priority = ask_list(
         "High-priority search keywords (comma-separated)",
-        default=", ".join(target_roles[:3]) if target_roles else "Product Manager",
+        default=", ".join(target_roles[:3]) if target_roles else None,
     )
     medium_priority = ask_list(
-        "Medium-priority search keywords (comma-separated)",
-        default="AI Product Manager, Data Product Manager, Strategy",
+        "Medium-priority search keywords (comma-separated, optional)",
+        required=False,
     )
 
     subheading("Scoring")
@@ -615,9 +612,11 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
         lines.append(f"- Email: `{offs['email']}`")
         lines.append(f"- Formal: `{offs['formal']}`")
         lines.append("")
-    lines.append("### PM Phrasing")
-    lines.append(f"- Startups: \"{writing_style['pm_phrases']['startup']}\"")
-    lines.append(f"- Large companies: \"{writing_style['pm_phrases']['large']}\"")
+    lines.append("### Role Phrasing")
+    phrases = writing_style.get("pm_phrases", {})
+    if phrases:
+        lines.append(f"- Startups: \"{phrases.get('startup', '')}\"")
+        lines.append(f"- Large companies: \"{phrases.get('large', '')}\"")
     lines.append("")
     lines.append("### Writing Rules")
     lines.append("")
@@ -645,7 +644,7 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
     lines.append("  profile.json       Personal info, career, credibility")
     lines.append("  search-criteria.json  Roles, companies, industries, locations")
     lines.append("  talking-points.json   Industry-specific talking points")
-    lines.append("  writing-style.json    Sign-offs, PM phrases, writing rules")
+    lines.append("  writing-style.json    Sign-offs, role phrasing, writing rules")
     lines.append("scripts/             Automation scripts")
     lines.append("  config_loader.py   Shared config loader (all scripts import this)")
     lines.append("  fetch_jobs.py      Job fetcher (JSearch via RapidAPI)")
@@ -670,11 +669,12 @@ def generate_claude_md(profile, search_criteria, talking_points, writing_style):
     lines.append("# Fetch jobs")
     lines.append(f"python {PROJECT_DIR / 'scripts' / 'fetch_jobs.py'}")
     lines.append("")
+    example_role = search_criteria.get("roles", {}).get("target", ["Your Role"])[0]
     lines.append("# Save a job you applied to")
-    lines.append(f"python {PROJECT_DIR / 'scripts' / 'save_job.py'} save --company Acme --role 'Product Manager'")
+    lines.append(f"python {PROJECT_DIR / 'scripts' / 'save_job.py'} save --company Acme --role '{example_role}'")
     lines.append("")
     lines.append("# Generate outreach message")
-    lines.append(f"python {PROJECT_DIR / 'scripts' / 'smart_template.py'} --name Alex --company Acme --job-title 'PM' --role recruiter --type connection-request")
+    lines.append(f"python {PROJECT_DIR / 'scripts' / 'smart_template.py'} --name Alex --company Acme --job-title '{example_role}' --role recruiter --type connection-request")
     lines.append("")
     lines.append("# Log outreach")
     lines.append(f"python {PROJECT_DIR / 'scripts' / 'update_outreach.py'} log --name Alex --company Acme --role recruiter --type connection-request --message 'Hi...'")

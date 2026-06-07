@@ -128,10 +128,17 @@ def get_filename_prefix():
 
 
 def get_pm_phrase(company_size):
-    """Return the PM phrasing for a given company size."""
+    """Return the role phrasing for a given company size."""
     style = load_writing_style()
-    phrases = style.get("pm_phrases", {"startup": "PM", "large": "PM", "unknown": "PM"})
-    return phrases.get(company_size, phrases.get("unknown", "PM"))
+    phrases = style.get("pm_phrases", {})
+    if not phrases:
+        # Fall back to user's title from profile
+        profile = load_profile()
+        title = profile.get("title", "")
+        if title:
+            return title
+        raise ValueError("No role phrasing configured. Run /job-search setup to set your writing style.")
+    return phrases.get(company_size, phrases.get("unknown", ""))
 
 
 def get_default_keywords():
@@ -148,7 +155,7 @@ def get_default_locations():
     preferred = locations.get("preferred", [])
     acceptable = locations.get("acceptable", [])
     # Return first preferred + "Remote" if acceptable
-    result = preferred[:2] if preferred else ["San Francisco Bay Area"]
+    result = preferred[:2] if preferred else []
     if any("remote" in loc.lower() for loc in acceptable):
         result.append("Remote")
     return result
